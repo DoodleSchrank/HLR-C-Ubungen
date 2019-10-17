@@ -4,7 +4,7 @@
 enum cardd { N=1, E=2, S=4, W=8 };
 
 // Definieren Sie ein 3x3-Array namens map, das Werte vom Typ cardd enthält
-static char* map[ 3 ][ 3 ] =	{{"0", "0", "0" },
+static char *map[ 3 ][ 3 ] =	{{"0", "0", "0" },
 				{ "0", "0", "0" },
 				{ "0", "0", "0" }};
 
@@ -13,10 +13,12 @@ static char* map[ 3 ][ 3 ] =	{{"0", "0", "0" },
 // Überprüfen Sie außerdem dir auf Gültigkeit
 void set_dir (int x, int y, enum cardd dir)
 {
+	// Alle Werte > 12 sind illegal, genauso wie die Werte 5,6,7 und 11.
+	// Außerdem dürfen x und y nicht 2 überschreiten, da die Matrix nur von 0 bis 2 reicht.
 	if(dir <= 12 && dir != 5 && dir != 6 && dir != 7 && dir != 11 && x < 3 && y < 3)
 	{
 		
-		char* c = "0";
+		char *c = "0";
 		switch(dir)
 		{
 			case 1: c = "N"; break;
@@ -34,7 +36,7 @@ void set_dir (int x, int y, enum cardd dir)
 	}
 }
 
-// Die Funktion show_map soll das Array in Form einer 3x3-Matrix ausgeben
+// Die Funktion show_map gibt das Array in Form einer 3x3-Matrix aus.
 void show_map (void)
 {
 	for(int x = 0; x < 3; x++)
@@ -47,6 +49,7 @@ void show_map (void)
 	}
 }
 
+// Main Method
 int main (void)
 {
 	// In dieser Funktion darf nichts verändert werden!
