@@ -1,0 +1,20 @@
+1.2)
+Frage: Mit which können Sie sich den Pfad einer Anwendung anzeigen lassen.
+Warum funktioniert das nicht für das Kommando cd? (Tipp: man bash)
+
+Antwort: `cd` ist ein in bash integrierter Befehl und besitzt daher keinen Pfad.
+
+1.3.f)
+Frage: Was fällt Ihnen bezüglich der drei Größen auf?
+
+Antwort: Die Datei mit zufälligem Inhalt ist genau 256K groß, welches an dem Parameter `count=256` liegt.
+Das tar-Archiv ist ein paar Kilobyte größer (260K), da es zusätzlich noch Metadaten enthält.
+Das komprimierte tar-archiv ist wieder ein wenig kleiner (257K) als das tar-archiv,
+jedoch nicht kleiner als die Datei mit zufälligem Inhalt,
+da sich zufällige Werte nicht gut komprimieren lassen.
+
+1.3)
+Frage: Ist es möglich, ein gepacktes Archiv (.tar.gz) mit einem Aufruf von
+tar zu erzeugen? Wie hätte dieser Aufruf lauten müssen?
+
+Antwort: Ja, mit `tar -czf archiv.tar.gz archiv`

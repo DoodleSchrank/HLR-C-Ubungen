@@ -38,7 +38,7 @@ void basic_pointer_changeValue (int x)
 	printf("x = %d\n", x);
 
 	// Ändern Sie den Wert von x über seine ADRESSE
-	*&x = 20;
+	*adresse_von_x = 20;
 	printf("x = %d\n", x);
 }
 

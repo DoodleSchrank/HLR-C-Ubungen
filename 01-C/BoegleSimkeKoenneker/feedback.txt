@@ -1,0 +1,21 @@
+Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden). 3-8 Stunden
+In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzen.
+
+Bearbeitungszeit:  
+Schwierigkeit:     [ ] zu leicht         [X] genau richtig     [ ] zu schwer
+Lehrreich:         [ ] wenig             [ ] etwas             [X] sehr
+Verständlichkeit:  [ ] großteils unklar  [X] teilweise unklar  [ ] verständlich
+
+Kommentar:
+Zeitaufwand zu groß? Wo sind Sie nicht weiter gekommen?
+Makefiles sind nicht gut erklärt, das Thema ist zu groß für das, was wir davon tatsächlich benutzen.
+
+Was war zu schwer oder unverständlich?
+Die Aufgabe mit der Makefile, siehe oben.
+
+Was könnten wir verbessern?
+Ggf. Einrichtungsanleitung für Windows-Umgebung und C-Tutorials.
+Besseres Makefiletutorial auswählen/erstellen?
+
+Was hat Ihnen besonders gut gefallen?
+Die Programmierübung. Die Grundlagen der Kommandozeilenbenutzung wurden gut vermittelt.
