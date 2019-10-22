@@ -7,6 +7,5 @@ all: map pointer
 	gcc -c $<
 
 clean:
-	rm -f *.bin
 	rm -f *.o
 	rm -f *~
