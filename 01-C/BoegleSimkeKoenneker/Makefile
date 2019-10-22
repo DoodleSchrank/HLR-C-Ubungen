@@ -1,7 +1,7 @@
-all: map.bin pointer.bin
+all: map pointer
 
-%.bin: %.o
-	gcc -o $@ $<
+%: %.o
+	gcc -o $^ $@
 	
 %.o: %.c
 	gcc -c $<
