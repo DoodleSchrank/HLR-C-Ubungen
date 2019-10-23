@@ -1,0 +1,27 @@
+> breakpoint 19
+> run
+> print buf
+$1 = {194, 0, -8681, 32767, -8682, 32767}
+> print buf[2]
+$2 = -8681
+
+> until 14
+> print buf
+$3 = {1, 1, 2, 3, 4, 5}
+> print buf[2]
+$4 = 2
+
+> until 17
+> ptype buf
+type = <data variable, no debug info>
+> until 22
+> ptype buf
+type = int *
+
+> select-frame 1
+> print p
+$5 = {0x4, 0x0, 0x555555555330 <__libc_csu_init>, 0x555555555070 <_start>}
+> call mistake4
+$6 = {int *()} 0x555555555215 <mistake4>
+
+
