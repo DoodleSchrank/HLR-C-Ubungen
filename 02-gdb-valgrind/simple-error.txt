@@ -1,0 +1,21 @@
+mistake1:
+In Zeile 12 fehlte ein `static` vor dem `int buf[] = {...`.
+Zuvor kam es zu einem "Segmentation Fault", da beim Verlassen der Funktion die lokale Variable nicht mehr auf dem Stack lag und der zurückgegebene Pointer ungültig war.
+
+mistake2:
+In Zeile 20 muss der Wert statt dem dritten Element (`buf[2] = 2;`) dem zweiten Element (`buf[1] = 2;`) zugewiesen werden, da dieser später abgefragt wird.
+Außerdem sollte in Zeile 19 statt `sizeof (char) * 4` `sizeof (int) * 2` allokiert werden, da die Größe `int` sich je nach System unterscheiden kann.
+
+mistake3:
+Hier sollte "kein Speicher direkt allokiert werden". Indirekt könnte man dies mit mistake2() tun: `int *buf = mistake2();`.
+
+mistake4:
+Da das erste Element gelesen wird, sollte `buf[4] = 4;` durch `buf[0] = 4;` ersetzt werden.
+Statt `sizeof (char) * 4` reicht damit hier ein `sizeof (int)` und ist ebenfalls aus den in mistake2 genannten Gründen besser.
+Außerdem muss das `free (buf);` entfernt werden, da es den Speicherplatz bereits freigibt, bevor der Pointer zurückgegeben wird.
+
+free:
+`p[0]` ist statisch allokiert, d.h. der Compiler gibt den Speicherplatz frei sobald es out of Scope ist und wir brauchen free nicht aufzurufen.
+`free (p[1]);` zeigt nicht auf das erste Element, stattdessen sollte es `free (--p[1]);` sein.
+`p[2]` ist nicht das selbe Array wie p[1] und muss auch freigegeben werden.
+`p[3]` ist ebenfalls dynamisch allokiert, damit gilt das selbe.

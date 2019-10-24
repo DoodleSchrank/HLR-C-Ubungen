@@ -1,0 +1,16 @@
+> Program received signal SIGSEGV, Segmentation fault.
+
+In askparams.c Zeile 197 muss `argV[333]` zu `argV[3]` geändert werden, da sonst auf eine falsche Speicheradresse zugegriffen wird.
+
+> Program received signal SIGSEGV, Segmentation fault.
+> 0x0000555555555485 in initMatrices () at partdiff-seq.c:133
+
+In partdiff-seq.c Zeile 96 muss statt `M = malloc (sizeof (double) * (N + 1) * (N - 1) * 2);`
+`M = malloc (sizeof (double) * (N + 1) * (N + 1) * 2);` stehen,
+da es 2 * (N+1) * (N+1) Elemente in der Matrix gibt.
+
+> Program received signal SIGSEGV, Segmentation fault.
+> 0x00005555555559b5 in calculate () at partdiff-seq.c:230
+
+In partdiff-seq.c Zeile 230 muss `Matrix[j - 1][m2][i]`
+zu `Matrix[m2][j - 1][i]` abgeändert werden, da der erste Index nur 0 oder 1 sein kann.

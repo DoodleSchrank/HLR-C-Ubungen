@@ -81,19 +81,19 @@ allocateMatrices (void)
       errorQuit ();
     }				/* quit if error   */
 
-  Matrix[0] = (double **) calloc ((N + 1), sizeof (double *));	/* allocate memory */
+  Matrix[0] = (double **) calloc (( + 1), sizeof (double *));	/* allocate memory */
   if (Matrix[0] == 0)
     {
       errorQuit ();
     }				/* quit if error   */
 
-  Matrix[1] = (double **) calloc ((N + 1), sizeof (double *));	/* allocate memory */
+  Matrix[1] = (double **) calloc (( + 1), sizeof (double *));	/* allocate memory */
   if (Matrix[1] == 0)
     {
       errorQuit ();
     }				/* quit if error   */
 
-  M = malloc (sizeof (double) * (N + 1) * (N - 1) * 2);	/* allocate memory */
+  M = malloc (sizeof (double) * (N + 1) * (N + 1) * 2);	/* allocate memory */
   if (M == 0)
     {
       errorQuit ();
@@ -101,7 +101,7 @@ allocateMatrices (void)
 
   for (i = 0; i <= 1; i++)
     for (j = 0; j <= N; j++)
-      Matrix[i][j] = (double *) (M + (i * (N + 1) * (N + 1)) + (j * (N + 1)));
+      Matrix[i][j] = (double *) (M + (i * ( + 1) * (N + 1)) + (j * (N + 1)));
 }
 
 
@@ -227,7 +227,7 @@ calculate (void)
 	  for (i = 1; i < N; i++)	/* over all rows  */
 	    {
 	      star = -Matrix[m2][i - 1][j]
-		- Matrix[j - 1][m2][i] + 4 * Matrix[m2][i][j] -
+		- Matrix[m2][j - 1][i] + 4 * Matrix[m2][i][j] -
 		Matrix[m2][i][j + 1] - Matrix[m2][i + 1][j];
 
 	      residuum = getResiduum (i, j);
@@ -276,7 +276,7 @@ displayStatistics (void)
     printf ("Anzahl der Iterationen");
   printf ("\n");
   printf ("Anzahl Iterationen: %d\n", stat_iteration);
-  printf ("Norm des Fehlers:   %e\n", stat_precision);
+  printf ("orm des Fehlers:   %e\n", stat_precision);
 }
 
 

@@ -1,27 +1,60 @@
-> breakpoint 19
-> run
-> print buf
-$1 = {194, 0, -8681, 32767, -8682, 32767}
-> print buf[2]
-$2 = -8681
+(gdb) b 10
+Breakpoint 1 at 0x1171: file simple.c, line 11.
+(gdb) run
+Starting program: /home/irgendwr/Documents/wise1920/HLR/Übung/02-gdb-valgrind/simple/simple 
 
-> until 14
-> print buf
-$3 = {1, 1, 2, 3, 4, 5}
-> print buf[2]
-$4 = 2
+Breakpoint 1, mistake1 () at simple.c:11
+11      {
+(gdb) print buf
+$1 = {1, 0, -7464, 32767, -7448, 32767}
+(gdb) print buf[2]
+$2 = -7464
+(gdb) n
+12        int buf[] = { 1, 1, 2, 3, 4, 5 };
+(gdb) print buf
+$3 = {1, 0, -7464, 32767, -7448, 32767}
+(gdb) print buf[2]
+$4 = -7464
+(gdb) ptype buf
+type = int [6]
+(gdb) n
+13        return buf;
+(gdb) print buf
+$5 = {1, 1, 2, 3, 4, 5}
+(gdb) print buf[2]
+$6 = 2
+(gdb) b 20
+Breakpoint 2 at 0x5555555551db: file simple.c, line 20.
+(gdb) c
+Continuing.
 
-> until 17
-> ptype buf
-type = <data variable, no debug info>
-> until 22
-> ptype buf
+Breakpoint 2, mistake2 () at simple.c:20
+20        buf[2] = 2;
+(gdb) ptype buf
 type = int *
+(gdb) c
+Continuing.
 
-> select-frame 1
-> print p
-$5 = {0x4, 0x0, 0x555555555330 <__libc_csu_init>, 0x555555555070 <_start>}
-> call mistake4
-$6 = {int *()} 0x555555555215 <mistake4>
-
-
+Program received signal SIGSEGV, Segmentation fault.
+0x0000555555555209 in mistake3 () at simple.c:30
+30        buf[0] = 3;
+(gdb) list
+25      mistake3 ()
+26      {
+27        /* In dieser Funktion darf kein Speicher direkt allokiert werden. */
+28        int mistake2_ = 0;
+29        int *buf = (int *) &mistake2;
+30        buf[0] = 3;
+31        return buf;
+32      }
+33
+34      int *
+(gdb) bt
+#0  0x0000555555555209 in mistake3 () at simple.c:30
+#1  0x0000555555555290 in main () at simple.c:47
+(gdb) select-frame 1
+(gdb) print p
+$7 = {0x4, 0x5555555592a4, 0x555555555330 <__libc_csu_init>, 0x555555555070 <_start>}
+(gdb) call mistake4
+$8 = {int *()} 0x555555555215 <mistake4>
+(gdb)

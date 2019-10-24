@@ -1,13 +1,25 @@
-Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden).
+Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden). 7
 In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzen.
 
 Bearbeitungszeit:  
-Schwierigkeit:     [ ] zu leicht         [ ] genau richtig     [ ] zu schwer
-Lehrreich:         [ ] wenig             [ ] etwas             [ ] sehr
-Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [ ] verständlich
+Schwierigkeit:     [ ] zu leicht         [X] genau richtig     [X] zu schwer
+Lehrreich:         [ ] wenig             [ ] etwas             [X] sehr
+Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [X] verständlich
 
 Kommentar:
-Zeitaufwand zu groß? Wo sind Sie nicht weiter gekommen?
-Was war zu schwer oder unverständlich?
+Zeitaufwand zu groß?
+Gefühlt ja, aber für 9LP passend.
+
+Wo sind Sie nicht weiter gekommen?
+Bei Aufgabe 2, der zweite Fehler (Zeile 96) war schwieriger zu finden da der Error in Zeile 133 auftrat.
+
+Was war zu schwer oder unverständlich? 
+Aufgaben waren an sich nicht zu schwer, aber siehe Verbesserungsvorschläge.
+
 Was könnten wir verbessern?
+Bessere Kommentare würden beim Debuggen helfen.
+Die Fehler waren nicht rein semantisch, sondern auch auf den Inhalt bezogen --> Schlechte Fehlerwahl.
+Mehr Informationen über Memory-Allokation wären hilfreich gewesen.
+
 Was hat Ihnen besonders gut gefallen?
+// Lernkurve ist sickoo geht steil ab yo.
