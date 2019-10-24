@@ -9,15 +9,15 @@
 int *
 mistake1 ()
 {
-  int* buf = { 1, 1, 2, 3, 4, 5 };
+  static int buf[] = { 1, 1, 2, 3, 4, 5 };
   return buf;
 }
 
 int *
 mistake2 ()
 {
-  int *buf = malloc (sizeof (char) * 4);
-  buf[2] = 2;
+  int* buf = malloc (sizeof (char) * 4);
+  buf[1] = 2;
   return buf;
 }
 
@@ -25,9 +25,8 @@ int *
 mistake3 ()
 {
   /* In dieser Funktion darf kein Speicher direkt allokiert werden. */
-  int mistake2 = 0;
-  int *buf = (int *) &mistake2;
-  buf[0] = 3;
+  int *buf = mistake2();
+  *buf = 3;
   return buf;
 }
 
@@ -37,7 +36,7 @@ mistake4 ()
   int *buf = malloc (sizeof (char) * 4);
   buf[4] = 4;
   free (buf);
-  return buf;
+  return &buf[4];
 }
 
 int
@@ -53,7 +52,7 @@ main (void)
 
   /* mhh muss hier noch etwas gefreed werden? */
   /* Fügen sie hier die korrekten aufrufe von free() ein */
-  free (p[1]);			/* welcher Pointer war das doch gleich?, TODO: Fixme... :-) */
+  //free (p[1]);			/* welcher Pointer war das doch gleich?, TODO: Fixme... :-) */
 
   return 0;
 }
