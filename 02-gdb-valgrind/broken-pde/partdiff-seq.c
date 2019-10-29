@@ -101,7 +101,7 @@ allocateMatrices (void)
 
   for (i = 0; i <= 1; i++)
     for (j = 0; j <= N; j++)
-      Matrix[i][j] = (double *) (M + (i * ( + 1) * (N + 1)) + (j * (N + 1)));
+      Matrix[i][j] = (double *) (M + (i * (N + 1) * (N + 1)) + (j * (N + 1)));
 }
 
 
