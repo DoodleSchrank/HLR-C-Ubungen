@@ -1,0 +1,90 @@
+1. Was bedeutet der Begriff Batch Queuing?
+	Mehrere Programme werden zu einem Job zusammengefasst. Dieser Job wird dann auf einem von vielen Computern ausgeführt.
+
+2. Welche Aufgaben hat ein Batch-Queuing-System?
+	Computerressourcen an User verteilen, Jobs starten, ausführen und beobachten und Management der Job-Schlange
+
+3. Nennen Sie drei Beispiele für Batch-Queuing-Systeme.
+	Slurm, Portable Batch System, Platform LSF
+
+4. Welches Batch-Queuing-System wird auf dem Cluster verwendet?
+	Slurm
+
+5. Machen Sie sich mit der Manpage von sbatch vertraut. Beschreiben Sie die Funktionsweise des Kommandos.
+	sbatch übermittelt einen Job an Slurm. Dabei kann entweder eine Skriptdatei als Parameter mitgegeben werden oder es wird vom Standartinput gelesen.
+	Weiterhin kann man eine Vielzahl an Parametern übermitteln, welche Optionen setzen. Dies kann auch über ein #sbatch <option> in der Skriptdatei geschehen.
+	sbatch ist fertig, sobald das Skript an den Slurmcontroller übergeben wurde. Der Output braucht allerdings mehr Zeit und wird per Standart im Format slurm%j.out gespeichert wobei %j die JobID ist.
+
+6. Wie lassen sich die aktuellen Jobs und deren Status anzeigen?
+	> sview
+	> smap
+
+7. Machen Sie sich mit dem Befehl sview vertraut. Beschreiben Sie die wichtigsten Vorteile gegenüber dem vorigen Punkt.
+	sview hat ein graphisches Interface, man kann sich die verschiedenen Nodes, Jobs und Partitionen und ihre Spezifikationen anschauen, auch die versteckten ;).
+	Man kann suchen, neue Batches, Partitionen und Reservierungen erstellen.
+
+8. Gibt es eine Möglichkeit, einen bereits abgeschickten Job zu löschen (bevor oder während er läuſt)? Wenn ja, wie?
+	> scancel <jobid>
+
+9. Können auf dem Cluster mehrere Nutzer oder Jobs gleichzeitig denselben Knoten benutzen?
+	Ja.
+
+10. Finden Sie heraus wie Sie sich den detaillierten Status eines Jobs ausgeben lassen können.
+	> scontrol show jobid -dd <jobid>
+
+11. Welche Scheduling-Verfahren sind bei dem auf dem Cluster benutzten System möglich? Welches wird benutzt? Erläutern Sie jedes der Verfahren kurz.
+	Builtin: Hier wird eine Warteschlange nach Priorität abgearbeitet.
+	Backfill: Hier werden freie Ressourcen für kleinere Jobs in der Warteschlange genutzt.
+	> scontrol show config | grep SchedulerType
+	> SchedulerType = sched/backfill
+
+12. Finden Sie heraus, wie Sie einen einzelnen Knoten allokieren können. Allokieren Sie einen konkreten Knoten (z. B. west7), bauen Sie eine Verbindung zu diesem Knoten auf und führen sie hostname darauf aus.
+	> salloc -p west -N 7
+	> srun hostname
+
+	> west7
+	> west2
+	> west1
+	> west5
+	> west4
+	> west6
+
+13. Wie hoch ist das Timeout auf dem Cluster, bis alle Knoten wieder freigegeben werden?
+	> scontrol show config | grep BatchStartTimeout
+	> BatchStartTimeout	= 10 sec
+
+14. Wie können Sie die Priorität Ihrer Jobs nachschauen? Können Sie diese verändern oder beeinflussen?
+	> squeue -u koenneker,boegle,simke -o %Q,%A
+	> PRIORITY,JOBID
+	Beeinflussen kann man die Prioritäten nur als Administrator/root des Systems.
+
+15. Welche unterschiedlichen Partitionen sind auf dem Cluster eingerichtet? Wie kann die zu benutzende Partition geändert werden?
+	> sinfo -a
+	> PARTITION    AVAIL  TIMELIMIT  NODES  STATE NODELIST
+	> abu             up    6:00:00      3  down* abu[3-5]
+	> abu             up    6:00:00      2   idle abu[1-2]
+	> abu-long        up 1-00:00:00      3  down* abu[3-5]
+	> abu-long        up 1-00:00:00      2   idle abu[1-2]
+	> amd             up    6:00:00      2  down* amd[1,5]
+	> amd             up    6:00:00      3   idle amd[2-4]
+	> amd-long        up 1-00:00:00      2  down* amd[1,5]
+	> amd-long        up 1-00:00:00      3   idle amd[2-4]
+	> magny           up    6:00:00      1   idle magny1
+	> magny-long      up 1-00:00:00      1   idle magny1
+	> nehalem         up    6:00:00      1   idle nehalem5
+	> nehalem-long    up 1-00:00:00      1   idle nehalem5
+	> west            up    6:00:00      1  alloc west1
+	> west            up    6:00:00      9   idle west[2-10]
+	> west-long       up 1-00:00:00      1  alloc west1
+	> west-long       up 1-00:00:00      9   idle west[2-10]
+	> sandy           up    6:00:00     10   idle sandy[1-10]
+	> packages        up 1-00:00:00      2   idle abu1,magny1
+
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+gprof: 
+
