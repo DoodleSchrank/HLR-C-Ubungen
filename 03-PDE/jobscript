@@ -1,0 +1,10 @@
+#!/bin/bash
+#SBATCH --nodes=4
+#SBATCH --ntasks=4
+#SBATCH --partition=west
+#SBATCH --output=out.out
+#SBATCH --error=err.out
+
+srun timescript
+echo "fertig" >> out.out
+
