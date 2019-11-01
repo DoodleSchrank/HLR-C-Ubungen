@@ -1,0 +1,8 @@
+slurmstepd-west1: error: execve(): timescript: Permission denied
+srun: error: west1: task 0: Exited with exit code 13
+slurmstepd-west2: error: execve(): timescript: Permission denied
+slurmstepd-west3: error: execve(): timescript: Permission denied
+slurmstepd-west4: error: execve(): timescript: Permission denied
+srun: error: west3: task 2: Exited with exit code 13
+srun: error: west2: task 1: Exited with exit code 13
+srun: error: west4: task 3: Exited with exit code 13
