@@ -91,6 +91,6 @@ Frage: Was fällt Ihnen auf? Versuchen Sie Ihre Beobachtung zu erklären!
 
 Könnte man die Datei timescript.out auch innerhalb des Scriptes timescript erzeugen? Falls ja: Wie? Falls nein: Warum nicht?
 	Ja, mit
-	> echo $(hostname --short) "  :  " $(date --iso-8601=ns) >> output.file
+	> echo $(hostname --short) "  :  " $(date --iso-8601=ns) >> timescript.out
 	wird die Ausgabe direkt an Ende in der Datei output.file geschrieben.
 
