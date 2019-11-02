@@ -1,0 +1,21 @@
+1. Optimierung:
+	-O3 im Compiler
+
+	76s -> 12s
+	80s -> 35s
+
+2. und 3. Optimierung:
+	for Schleifen in calculate vertauscht (Spaltenpräzedenz) (Zeile 223-230)
+	Matrizenzugriffe durch Variablenzugriffe beschleunigt. (Zeile 213-215, 220-221, 231, 241, 245-246)
+
+	12s -> 7,3s
+	35s -> 35s
+
+4. Optimierung
+	getResiduum entfernt und größtenteils vorberechnet, siehe Zeile 204-211 und Zeile 233-240.
+
+	7,3s -> 7,8s
+	35s -> 3,8s
+
+5. Optimierung:
+	Variable Korrektur entfernt, da unnötig, keine Verbesserung
