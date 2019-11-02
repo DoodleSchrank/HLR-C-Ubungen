@@ -85,6 +85,12 @@
 ---------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
+Frage: Was fällt Ihnen auf? Versuchen Sie Ihre Beobachtung zu erklären!
+	Die einzelnen Knoten antworten maximal 3 Millisekunden versetzt, das könnte daran liegen, dass Slurm einige Zeit benötigt, um den Job zu verteilen und zu starten.
+	Ein weiterer Grund wäre, dass die Uhren auf den Mainboards der Knoten leicht versetzt sind.
 
-gprof: 
+Könnte man die Datei timescript.out auch innerhalb des Scriptes timescript erzeugen? Falls ja: Wie? Falls nein: Warum nicht?
+	Ja, mit
+	> echo $(hostname --short) "  :  " $(date --iso-8601=ns) >> output.file
+	wird die Ausgabe direkt an Ende in der Datei output.file geschrieben.
 
