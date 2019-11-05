@@ -1,21 +1,71 @@
-1. Optimierung:
-	-O3 im Compiler
+Ohne Optimierung
 
-	76s -> 12s
-	80s -> 35s
+`./partdiff-seq 1 2 64 1 2 10240`  45.08 s
+`./partdiff-seq 1 2 64 1 2 5120`   22.00 s
 
-2. und 3. Optimierung:
-	for Schleifen in calculate vertauscht (Spaltenpräzedenz) (Zeile 223-230)
-	Matrizenzugriffe durch Variablenzugriffe beschleunigt. (Zeile 213-215, 220-221, 231, 241, 245-246)
 
-	12s -> 7,3s
-	35s -> 35s
+1. Compiler-Optionen und -Optimierungen
+
+"-O1" in CFLAGS:
+13.50 s
+ 6.83 s
+
+"-O2" in CFLAGS:
+ 7.54 s
+ 3.73 s
+
+"-O3" in CFLAGS:
+ 7.42 s
+ 3.67 s
+
+2. gprof (ohne Compiler-Optimierungen)
+
+`./partdiff-seq 1 2 64 1 2 10240 && gprof ./partdiff-seq`
+  %   cumulative   self              self     total           
+ time   seconds   seconds    calls   s/call   s/call  name    
+ 78.83     35.80    35.80        1    35.80    45.20  calculate
+ 20.70     45.20     9.40 2758256640   0.00     0.00  getResiduum
+  0.66     45.50     0.30        1     0.30     0.30  initMatrices
+  0.00     45.50     0.00        4     0.00     0.00  allocateMemory
+  0.00     45.50     0.00        1     0.00     0.00  AskParams
+  0.00     45.50     0.00        1     0.00     0.00  DisplayMatrix
+  0.00     45.50     0.00        1     0.00     0.00  allocateMatrices
+  0.00     45.50     0.00        1     0.00     0.00  displayStatistics
+  0.00     45.50     0.00        1     0.00     0.00  freeMatrices
+  0.00     45.50     0.00        1     0.00     0.00  initVariables
+
+`perf stat ./partdiff-seq 1 2 64 1 2 10240`
+ Performance counter stats for './partdiff-seq 1 2 64 1 2 10240':
+
+         52.355,81 msec task-clock:u              #    1,000 CPUs utilized          
+                 0      context-switches:u        #    0,000 K/sec                  
+                 0      cpu-migrations:u          #    0,000 K/sec                  
+             1.134      page-faults:u             #    0,022 K/sec                  
+   223.820.932.549      cycles:u                  #    4,275 GHz                    
+        10.897.196      stalled-cycles-frontend:u #    0,00% frontend cycles idle   
+   153.598.656.456      stalled-cycles-backend:u  #   68,63% backend cycles idle    
+   612.390.778.014      instructions:u            #    2,74  insn per cycle         
+                                                  #    0,25  stalled cycles per insn
+    49.657.992.923      branches:u                #  948,471 M/sec                  
+         6.786.319      branch-misses:u           #    0,01% of all branches        
+
+      52,357239783 seconds time elapsed
+
+      52,355269000 seconds user
+       0,000000000 seconds sys
+
+Die Funktion "calculate" nimmt die meiste Zeit in Anspruch und "getResiduum" wird sehr häufig aufgerufen.
+
+3. Speicherzugriffsmuster
+
+i und j vertauscht (Spaltenpräzedenz):
+ 5.93 s
+ 2.95 s
+
+Pointer bei Matrixzugriffen brachten keine Verbesserung; wieder rückgängig gemacht.
 
 4. Optimierung
-	getResiduum entfernt und größtenteils vorberechnet, siehe Zeile 204-211 und Zeile 233-240.
 
-	7,3s -> 7,8s
-	35s -> 3,8s
-
-5. Optimierung:
-	Variable Korrektur entfernt, da unnötig, keine Verbesserung
+getResiduum() entfernt, da ein Teil der Berechnung sehr nah an Null liegt, sodass das Endergebnis nicht beeinflusst wird:
+ 5.81 s
+ 2.92 s

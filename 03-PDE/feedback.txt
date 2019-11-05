@@ -1,13 +1,20 @@
-Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden).
+Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden). 7
 In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzen.
 
 Bearbeitungszeit:  
-Schwierigkeit:     [ ] zu leicht         [ ] genau richtig     [ ] zu schwer
-Lehrreich:         [ ] wenig             [ ] etwas             [ ] sehr
-Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [ ] verständlich
+Schwierigkeit:     [ ] zu leicht         [X] genau richtig     [ ] zu schwer
+Lehrreich:         [ ] wenig             [ ] etwas             [X] sehr
+Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [X] verständlich
 
 Kommentar:
 Zeitaufwand zu groß? Wo sind Sie nicht weiter gekommen?
+-
+
 Was war zu schwer oder unverständlich?
+-
+
 Was könnten wir verbessern?
+Eventuell darauf hinweisen, dass das timescript mit `chmod +x timescript.sh` ausführbar gemacht werden sollte.
+
 Was hat Ihnen besonders gut gefallen?
+Die Shell-Script Aufgabe war sehr angenehm :)
