@@ -287,7 +287,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 /* ************************************************************************ */
 static
 void
-calculate (struct calculation_arguments const* arguments, struct calculation_results* results, struct options const* options)
+calculateColumns (struct calculation_arguments const* arguments, struct calculation_results* results, struct options const* options)
 {
 	int i, j;                                   /* local variables for loops */
 	int m1, m2;                                 /* used as indices for old and new matrices */
@@ -391,7 +391,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 /* ************************************************************************ */
 static
 void
-calculate (struct calculation_arguments const* arguments, struct calculation_results* results, struct options const* options)
+calculateSingle (struct calculation_arguments const* arguments, struct calculation_results* results, struct options const* options)
 {
 	int i, j;                                   /* local variables for loops */
 	int m1, m2;                                 /* used as indices for old and new matrices */
