@@ -1,9 +1,20 @@
 partdiff 12 2 512 2 2 512
-schedule(guided)
+row - schedule(guided)
 
 Ohne OpenMP: 269-271s
 Mit OpenMP: 27-28s
 
-Mit Spalten: 50-51s
-Einzelne Elemente: 122-123
+Column: 50-51s
+Single: 122-123
 
+
+Single
+static 1   -  300s
+static 2
+static 4
+static 16
+
+dynamic 1
+dynamic 4
+
+guided 27-28s
