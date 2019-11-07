@@ -222,7 +222,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 		maxresiduum = 0;
 		
-		#pragma omp parallel guided for schedule(dynamic) private(fpisin_i, i, j, star, residuum)
+		#pragma omp parallel for guided schedule(dynamic) private(fpisin_i, i, j, star, residuum)
 		/* over all rows */
 		for (i = 1; i < N; i++)
 		{
