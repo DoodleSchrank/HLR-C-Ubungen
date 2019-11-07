@@ -13,13 +13,13 @@ all: askparams.o partdiff partdiff_row partdiff_column partdiff_single
 
 
 partdiff: partdiff.o
-	gcc $(CFLAGS) partdiff.o askparams.o $(LIBS)
+	gcc $(CFLAGS) -o partdiff partdiff.o askparams.o $(LIBS)
 partdiff_row: partdiff_row.o
-	gcc $(CFLAGS) partdiff_row.o askparams.o $(LIBS)
+	gcc $(CFLAGS) -o partdiff_row partdiff_row.o askparams.o $(LIBS)
 partdiff_column: partdiff_column.o
-	gcc $(CFLAGS) partdiff_column.o askparams.o $(LIBS)
+	gcc $(CFLAGS) -o partdiff_column partdiff_column.o askparams.o $(LIBS)
 partdiff_single: partdiff_single.o
-	gcc $(CFLAGS) partdiff_single.o askparams.o $(LIBS)
+	gcc $(CFLAGS) -o partdiff_column.o partdiff_single.o askparams.o $(LIBS)
 
 
 askparams.o: askparams.c
