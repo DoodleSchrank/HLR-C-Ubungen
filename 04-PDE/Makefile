@@ -19,7 +19,7 @@ partdiff_row: partdiff_row.o
 partdiff_column: partdiff_column.o
 	gcc $(CFLAGS) -o partdiff_column partdiff_column.o askparams.o $(LIBS)
 partdiff_single: partdiff_single.o
-	gcc $(CFLAGS) -o partdiff_column.o partdiff_single.o askparams.o $(LIBS)
+	gcc $(CFLAGS) -o partdiff_single partdiff_single.o askparams.o $(LIBS)
 
 
 askparams.o: askparams.c
