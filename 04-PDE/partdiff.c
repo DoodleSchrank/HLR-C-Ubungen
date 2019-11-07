@@ -221,7 +221,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		double** Matrix_In  = arguments->Matrix[m2];
 
 		maxresiduum = 0;
-
+		
+		#pragma omp parallel guided for shared(Matrix_In, Matrix_Out, maxresiduum, options, N, pih, term_iteration) private(fpisin_i, i, j, star, residuum)
 		/* over all rows */
 		for (i = 1; i < N; i++)
 		{
@@ -252,6 +253,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 				Matrix_Out[i][j] = star;
 			}
 		}
+		#pragma omp barrier
 
 		results->stat_iteration++;
 		results->stat_precision = maxresiduum;
