@@ -124,7 +124,8 @@ allocateMatrices (struct calculation_arguments* arguments)
 	for (i = 0; i < arguments->num_matrices; i++)
 	{
 		arguments->Matrix[i] = allocateMemory((N + 1) * sizeof(double*));
-
+		
+		#pragma omp parallel for schedule(guided)
 		for (j = 0; j <= N; j++)
 		{
 			arguments->Matrix[i][j] = arguments->M + (i * (N + 1) * (N + 1)) + (j * (N + 1));
@@ -148,6 +149,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	/* initialize matrix/matrices with zeros */
 	for (g = 0; g < arguments->num_matrices; g++)
 	{
+		#pragma omp parallel for schedule(guided) private(j)
 		for (i = 0; i <= N; i++)
 		{
 			for (j = 0; j <= N; j++)
@@ -162,6 +164,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	{
 		for (g = 0; g < arguments->num_matrices; g++)
 		{
+			#pragma omp parallel for schedule(guided)
 			for (i = 0; i <= N; i++)
 			{
 				Matrix[g][i][0] = 1.0 - (h * i);
@@ -222,7 +225,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 		maxresiduum = 0;
 		
-		#pragma omp guided parallel for schedule(dynamic) private(fpisin_i, i, j, star, residuum)
+		//#pragma omp parallel for schedule(guided) private(j, star, residuum)
 		/* over all rows */
 		for (i = 1; i < N; i++)
 		{
@@ -232,8 +235,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 			{
 				fpisin_i = fpisin * sin(pih * (double)i);
 			}
-
-			/* over all columns */
+			#pragma omp parallel for schedule(guided) private(star, residuum)
+			//* over all columns */
 			for (j = 1; j < N; j++)
 			{
 				star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
@@ -247,13 +250,13 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 				{
 					residuum = Matrix_In[i][j] - star;
 					residuum = (residuum < 0) ? -residuum : residuum;
+					#pragma omp critical
 					maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
 				}
 
 				Matrix_Out[i][j] = star;
 			}
 		}
-		#pragma omp barrier
 
 		results->stat_iteration++;
 		results->stat_precision = maxresiduum;
