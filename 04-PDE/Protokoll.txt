@@ -1,0 +1,7 @@
+partdiff 12 2 512 2 2 512
+
+Ohne OpenMP: 269-271s
+Mit OpenMP: 27-28s
+
+Mit Spalten: 50-51s
+Einzelne Elemente: 122-123
