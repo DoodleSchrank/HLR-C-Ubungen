@@ -2,9 +2,9 @@
 #SBATCH --nodes=3
 #SBATCH -n 3
 #SBATCH --partition=west
-#SBATCH --output=%j
+#SBATCH --output=%j.out
 
 
-srun partdiff_row 12 2 512 2 2 512
+srun partdiff_single 12 2 512 2 2 512
 echo "fertig" > fertig
 

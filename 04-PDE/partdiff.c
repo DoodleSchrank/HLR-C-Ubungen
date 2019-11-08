@@ -547,7 +547,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 			{
 				fpisin_i = fpisin * sin(pih * (double)i);
 			}
-			#pragma omp parallel for schedule(static, 1) private(star, residuum) reduction(max:maxresiduum)
+			#pragma omp parallel for schedule(guided) private(star, residuum) reduction(max:maxresiduum)
 			//* over all columns */
 			for (j = 1; j < N; j++)
 			{
