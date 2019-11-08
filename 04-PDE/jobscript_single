@@ -2,8 +2,8 @@
 #SBATCH --nodes=3
 #SBATCH -n 3
 #SBATCH --partition=west
-#SBATCH --output=%j.out
-
+#SBATCH --output=%j
+#SBATCH set OMP_NUM_THREADS=12
 
 srun partdiff_single 12 2 512 2 2 512
 echo "fertig" > fertig
