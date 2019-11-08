@@ -1,20 +1,37 @@
 partdiff 12 2 512 2 2 512
 row - schedule(guided)
 
-Ohne OpenMP: 269-271s
-Mit OpenMP: 27-28s
+Parallelisierung mit OpenMP
+	Ohne OpenMP: 269-271s
+	Mit OpenMP und Row: 18,2s
+	
+Umsetzung der Datenaufteilung
+	Mit OpenMP und Row: 18,2s
 
-Column: 50-51s
-Single: 122-123
+	Column: 56,8-57s
+	Single: 114,4-115s
 
+Vergleich der Scheduling-Algorithmen
+	Single
+	---
+	static 1	- 53-55s
+	static 2	- 48,1-49s
+	static 4	- 43-45,1s
+	static 16	- 35,3-36,1s
 
-Single
-static 1   -  300s
-static 2
-static 4
-static 16
+	dynamic 1	- 246,6-252,8s
+	dynamic 4	- 84,3-87,5s
 
-dynamic 1
-dynamic 4
+	guided 		- 114,4-115,5s
+	---------------------------
+	Row
+	---
+	static 1	- 18,1s
+	static 2	- 18,2s
+	static 4	- 18,3s
+	static 16	- 18,5s
 
-guided 27-28s
+	dynamic 1	- 18,3-18,4s
+	dynamic 4	- 18,42-18,45s
+
+	guided 		- 18,1-18,35s
