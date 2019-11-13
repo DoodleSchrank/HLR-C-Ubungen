@@ -190,7 +190,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	}
 }
 
-static double calculaterow(struct pthread_parameters const *param)
+static double calculaterow(struct pthread_parameters *param)
 {
 	double maxresiduum = 0.0;
 	double star = 0.0;
@@ -200,29 +200,29 @@ static double calculaterow(struct pthread_parameters const *param)
 	for (int i = param->start; i < param->end; i++)
 	{
 		double fpisin_i = 0.0;
-		if (options->inf_func == FUNC_FPISIN)
+		if (param->options->inf_func == FUNC_FPISIN)
 		{
-			fpisin_i = param->fpisin * sin(param->pih * (double)i);
+			fpisin_i = *param->fpisin * sin(*param->pih * (double)i);
 		}
 		
 		//* over all columns */
-		for (int j = 1; j < N; j++)
+		for (int j = 1; j < param->N; j++)
 		{
-		star = 0.25 * (param->Matrix_In[i-1][j] + param->Matrix_In[i][j-1] + param->Matrix_In[i][j+1] + param->Matrix_In[i+1][j]);
-		if (options->inf_func == FUNC_FPISIN)
+		star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
+		if (param->options->inf_func == FUNC_FPISIN)
 		{
-			star += fpisin_i * sin(pih * (double)j);
+			star += fpisin_i * sin(*param->pih * (double)j);
 		}
-		if (options->termination == TERM_PREC || term_iteration == 1)
+		if (param->options->termination == TERM_PREC || *param->term_iteration == 1)
 		{
-			residuum = Matrix_In[i][j] - star;
+			residuum = *param->Matrix_In[i][j] - star;
 			residuum = (residuum < 0) ? -residuum : residuum;
 				maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
 			}
-			param->Matrix_Out[i][j] = star;
+			*param->Matrix_Out[i][j] = star;
 		}
 	}
-	return *maxresiduum;
+	return maxresiduum;
 }
 
 
@@ -246,15 +246,15 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	int term_iteration = options->term_iteration;
 	int psize = options->number / N;
 	
-	double** Matrix_Out;
-	double** Matrix_In;
+	double **Matrix_Out;
+	double **Matrix_In;
 
 	pthread_t threads[options->number - 1];
-	double *presults[options->number -1];
-	struct pthread_parameters const *params[options->number];
-	for(int i = 0; i < options->number)
+	double **presults[options->number];
+	struct pthread_parameters *params[options->number];
+	for(int i = 0; i < options->number; i++)
 	{
-		params[i] = {i, (int) ((i+1)* psize), N, *fpisin, *pih, *Matrix_In, *Matrix_Out, *term_iteration, options};
+		params[i]->start = i;//, (int) ((i+1)* psize), N, *fpisin, *pih, *Matrix_In, *Matrix_Out, *term_iteration, options};
 	}
 	
 	/* initialize m1 and m2 depending on algorithm */
@@ -294,12 +294,12 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Join Threads
 		for(i = 0; i < (int) options->number - 1; i++)
 		{
-			pthread_join(threads[i], presults[i]);
+			pthread_join(threads[i], *presults[i]);
 		}
 		// Join maxresiduum
 		for(i = 0; i < (int) options->number - 1; i++)
 		{
-			maxresiduum = (presults[i] < maxresiduum) ? maxresiduum : presults[i];
+			maxresiduum = (**presults[i] < maxresiduum) ? maxresiduum : **presults[i];
 		}
 		
 		results->stat_iteration++;

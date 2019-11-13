@@ -13,7 +13,7 @@ OBJS = partdiff.o askparams.o
 all: partdiff
 
 partdiff: $(OBJS) Makefile
-	$(CC) $(LFLAGS) -o $@ $(OBJS) $(LIBS)
+	$(CC) $(LFLAGS) -o $@ $(OBJS) $(LIBS) > grrrr
 
 partdiff.o: partdiff.c Makefile
 
