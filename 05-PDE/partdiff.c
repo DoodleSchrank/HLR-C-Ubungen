@@ -35,8 +35,8 @@ struct pthread_parameters
 	int start;
 	int end;
 	int N;
-	double fpisin;
-	double pih;
+	double *fpisin;
+	double *pih;
 	double ***Matrix_In;
 	double ***Matrix_Out;
 	int *term_iteration;
@@ -254,7 +254,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	struct pthread_parameters params[options->number];
 	for(int i = 0; i < options->number)
 	{
-		params[i] = {i, (int) ((i+1)* psize), N, fpisin, pih, *Matrix_In, *Matrix_Out, *term_iteration, options};
+		params[i] = {i, (int) ((i+1)* psize), N, *fpisin, *pih, *Matrix_In, *Matrix_Out, *term_iteration, options};
 	}
 	
 	/* initialize m1 and m2 depending on algorithm */
