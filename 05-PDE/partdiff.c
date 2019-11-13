@@ -190,7 +190,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	}
 }
 
-static double calculaterow(struct pthread_parameters param)
+static double calculaterow(struct pthread_parameters const *param)
 {
 	double maxresiduum = 0.0;
 	double star = 0.0;
@@ -282,7 +282,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 1; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, calculaterow, params[i]);
+			pthread_create(&threads[i-1], NULL, calculaterow, *params[i]);
 		}
 		
 		// No part-timers!
