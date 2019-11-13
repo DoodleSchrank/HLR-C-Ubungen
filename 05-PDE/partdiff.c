@@ -245,6 +245,9 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	int term_iteration = options->term_iteration;
 	int psize = options->number / N;
+	
+	double** Matrix_Out;
+	double** Matrix_In;
 
 	pthread_t threads[options->number - 1];
 	double presults[options->number -1];
@@ -274,8 +277,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	while (term_iteration > 0)
 	{
-		double** Matrix_Out = arguments->Matrix[m1];
-		double** Matrix_In  = arguments->Matrix[m2];
+		Matrix_Out = arguments->Matrix[m1];
+		Matrix_In  = arguments->Matrix[m2];
 
 		maxresiduum = 0;
 		
