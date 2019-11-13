@@ -250,7 +250,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	double** Matrix_In;
 
 	pthread_t threads[options->number - 1];
-	double presults[options->number -1];
+	double *presults[options->number -1];
 	struct pthread_parameters const *params[options->number];
 	for(int i = 0; i < options->number)
 	{
