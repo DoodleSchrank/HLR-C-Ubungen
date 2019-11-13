@@ -220,10 +220,8 @@ static
 void
 calculate (struct calculation_arguments const* arguments, struct calculation_results* results, struct options const* options)
 {
-	uint64_t i, j;                                   /* local variables for loops */
+	uint64_t i;                                   /* local variables for loops */
 	int m1, m2;                                 /* used as indices for old and new matrices */
-	double star;                                /* four times center value minus 4 neigh.b values */
-	double residuum;                            /* residuum of current iteration */
 	double maxresiduum;                         /* maximum residuum value of a slave in iteration */
 
 	int const N = arguments->N;
@@ -272,11 +270,11 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		
 		for(i = 0; i < options->number - 1; i++)
 		{
-			pthread_join(threads[i], presult[i]);
+			pthread_join(threads[i], presults[i]);
 		}
 		for(i = 0; i < options->number - 1; i++)
 		{
-			maxresiduum = (presult[i] < maxresiduum) ? maxresiduum : presult[i];
+			maxresiduum = (presults[i] < maxresiduum) ? maxresiduum : presults[i];
 		}
 		
 		results->stat_iteration++;
