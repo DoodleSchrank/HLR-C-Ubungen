@@ -222,7 +222,7 @@ static double calculaterow(struct pthread_parameters const *param)
 			param->Matrix_Out[i][j] = star;
 		}
 	}
-	return maxresiduum;
+	return *maxresiduum;
 }
 
 
