@@ -251,7 +251,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	pthread_t threads[options->number - 1];
 	double presults[options->number -1];
-	struct pthread_parameters params[options->number];
+	struct pthread_parameters const *params[options->number];
 	for(int i = 0; i < options->number)
 	{
 		params[i] = {i, (int) ((i+1)* psize), N, *fpisin, *pih, *Matrix_In, *Matrix_Out, *term_iteration, options};
@@ -289,7 +289,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		}
 		
 		// No part-timers!
-		calculaterow(params[0]);
+		calculaterow(*params[0]);
 		
 		// Join Threads
 		for(i = 0; i < options->number - 1; i++)
