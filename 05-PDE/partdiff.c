@@ -187,7 +187,7 @@ static double calculaterow(int start, int end, int N, double fpisin, double pih,
 	for (int i = start; i < end; i++)
 	{
 		double fpisin_i = 0.0;
-		if (options.inf_func == FUNC_FPISIN)
+		if (options->inf_func == FUNC_FPISIN)
 		{
 			fpisin_i = fpisin * sin(pih * (double)i);
 		}
@@ -196,11 +196,11 @@ static double calculaterow(int start, int end, int N, double fpisin, double pih,
 		for (int j = 1; j < N; j++)
 		{
 		star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
-		if (options.inf_func == FUNC_FPISIN)
+		if (options->inf_func == FUNC_FPISIN)
 		{
 			star += fpisin_i * sin(pih * (double)j);
 		}
-		if (options.termination == TERM_PREC || term_iteration == 1)
+		if (options->termination == TERM_PREC || term_iteration == 1)
 		{
 			residuum = Matrix_In[i][j] - star;
 			residuum = (residuum < 0) ? -residuum : residuum;
