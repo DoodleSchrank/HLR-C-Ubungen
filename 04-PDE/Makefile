@@ -1,39 +1,38 @@
-CC=gcc
+# Common definitions
+CC = gcc
+
+# Compiler flags, paths and libraries
 CFLAGS = -std=c11 -pedantic -Wall -Wextra -O3 -ggdb -fopenmp
 LFLAGS = $(CFLAGS)
 LIBS   = -lm
 
-TGTS = partdiff partdiff_row partdiff_column partdiff_single
-OBJS = partdiff.o partdiff_row.o partdiff_column.o partdiff_single.o askparams.o
+TGTS = partdiff-openmp partdiff-openmp-zeilen partdiff-openmp-spalten partdiff-openmp-element
+OBJS = askparams.o partdiff-openmp-zeilen.o partdiff-openmp-spalten.o partdiff-openmp-element.o
 
+# Targets ...
+all: partdiff-openmp partdiff-openmp-zeilen partdiff-openmp-spalten partdiff-openmp-element
 
-all: askparams.o partdiff partdiff_row partdiff_column partdiff_single
+partdiff-openmp: partdiff-openmp-zeilen.o askparams.o
+	$(CC) $(LFLAGS) -o $@ partdiff-openmp-zeilen.o askparams.o $(LIBS)
 
+partdiff-openmp-%: partdiff-openmp-%.o askparams.o
+	$(CC) $(LFLAGS) -o $@ partdiff-openmp-$*.o askparams.o $(LIBS)
 
-
-
-partdiff: partdiff.o
-	gcc $(CFLAGS) -o partdiff partdiff.o askparams.o $(LIBS)
-partdiff_row: partdiff_row.o
-	gcc $(CFLAGS) -o partdiff_row partdiff_row.o askparams.o $(LIBS)
-partdiff_column: partdiff_column.o
-	gcc $(CFLAGS) -o partdiff_column partdiff_column.o askparams.o $(LIBS)
-partdiff_single: partdiff_single.o
-	gcc $(CFLAGS) -o partdiff_single partdiff_single.o askparams.o $(LIBS)
-
+partdiff.o: partdiff.c
+	$(CC) -c $(CFLAGS) -D NORMAL $< -o $@
+partdiff-openmp-zeilen.o: partdiff.c
+	$(CC) -c $(CFLAGS) -D ROW $< -o $@
+partdiff-openmp-spalten.o: partdiff.c
+	$(CC) -c $(CFLAGS) -D COLUMN $< -o $@
+partdiff-openmp-element.o: partdiff.c
+	$(CC) -c $(CFLAGS) -D SINGLE $< -o $@
 
 askparams.o: askparams.c
-	gcc $(CFLAGS) -c askparams.c
-partdiff.o: partdiff.c
-	gcc -D NORMAL $(CFLAGS) -c partdiff.c
-partdiff_row.o: partdiff.c
-	gcc -D ROW $(CFLAGS) -c partdiff.c -o partdiff_row.o
-partdiff_column.o: partdiff.c
-	gcc -D COLUMN $(CFLAGS) -c partdiff.c -o partdiff_column.o
-partdiff_single.o: partdiff.c
-	gcc -D SINGLE $(CFLAGS) -c partdiff.c -o partdiff_single.o
+
+# Rule to create *.o from *.c
+%.o: %.c
+	$(CC) -c $(CFLAGS) $*.c
 
 clean:
 	$(RM) $(OBJS)
 	$(RM) $(TGTS)
-

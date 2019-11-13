@@ -1,0 +1,6 @@
+# ignore binarys
+partdiff
+partdiff-openmp
+partdiff-openmp-element
+partdiff-openmp-spalten
+partdiff-openmp-zeilen
