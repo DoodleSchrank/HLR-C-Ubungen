@@ -177,14 +177,14 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	}
 }
 
-static double calculaterow(int start, int end, int N, double fpisin, double pih, double** Matrix_In, double** Matrix_Out)
+static double calculaterow(int start, int end, int N, double fpisin, double pih, double** Matrix_In, double** Matrix_Out, struct options options)
 {
 	double maxresiduum = 0.0;
 	double star = 0.0;
 	double residuum = 0.0;
 	
 	/* over all rows */
-	for (int i = 1; i < N; i++)
+	for (int i = start; i < end; i++)
 	{
 		double fpisin_i = 0.0;
 		if (options->inf_func == FUNC_FPISIN)
@@ -266,9 +266,9 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		for(i = 1; i < options->number; i++)
 		{
 			pthread_create(&threads[i-1], NULL, calculaterow, 
-				(int) (i * psize), (int) ((i + 1) * psize), N, fpisin, pih, Matrix_In, Matrix_Out);
+				(int) (i * psize), (int) ((i + 1) * psize), N, fpisin, pih, Matrix_In, Matrix_Out, options);
 		}
-		calculaterow(0, psize, N, fpisin, pih, Matrix_In, Matrix_Out);
+		calculaterow(0, psize, N, fpisin, pih, Matrix_In, Matrix_Out, options);
 		
 		for(i = 0; i < options->number - 1; i++)
 		{
