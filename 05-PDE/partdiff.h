@@ -36,7 +36,7 @@
 
 struct options
 {
-	int number;         	 /* Number of threads                              */
+	uint64_t number;         	 /* Number of threads                              */
 	uint64_t method;         /* Gauss Seidel or Jacobi method of iteration     */
 	uint64_t interlines;     /* matrix size = interlines*8+9                   */
 	uint64_t inf_func;       /* inference function                             */

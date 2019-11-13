@@ -285,19 +285,19 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 1; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, calculaterow, *params[i]);
+			pthread_create(&threads[i-1], NULL, calculaterow, params[i]);
 		}
 		
 		// No part-timers!
-		calculaterow(*params[0]);
+		calculaterow(params[0]);
 		
 		// Join Threads
-		for(i = 0; i < options->number - 1; i++)
+		for(i = 0; i < (int) options->number - 1; i++)
 		{
 			pthread_join(threads[i], presults[i]);
 		}
 		// Join maxresiduum
-		for(i = 0; i < options->number - 1; i++)
+		for(i = 0; i < (int) options->number - 1; i++)
 		{
 			maxresiduum = (presults[i] < maxresiduum) ? maxresiduum : presults[i];
 		}
