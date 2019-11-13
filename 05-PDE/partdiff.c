@@ -30,6 +30,19 @@
 
 #include "partdiff.h"
 
+struct pthread_parameters
+{
+	int start;
+	int end;
+	int N;
+	double fpisin;
+	double pih;
+	double ***Matrix_In;
+	double ***Matrix_Out;
+	int *term_iteration;
+	struct options const *options;
+};
+
 struct calculation_arguments
 {
 	uint64_t  N;              /* number of spaces between lines (lines=N+1)     */
@@ -177,7 +190,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	}
 }
 
-static double calculaterow(int start, int end, int N, double fpisin, double pih, double** Matrix_In, double** Matrix_Out, int term_iteration, struct options const *options)
+static double calculaterow(struct pthread_parameters param)
 {
 	double maxresiduum = 0.0;
 	double star = 0.0;
@@ -235,6 +248,11 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	pthread_t threads[options->number - 1];
 	double presults[options->number -1];
+	struct pthread_parameters params[options->number];
+	for(int i = 0; i < options->number)
+	{
+		params[i] = {i, (int) ((i+1)* psize), N, fpisin, pih, *Matrix_In, *Matrix_Out, *term_iteration, options};
+	}
 	
 	/* initialize m1 and m2 depending on algorithm */
 	if (options->method == METH_JACOBI)
@@ -261,17 +279,21 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 		maxresiduum = 0;
 		
+		// Gabel
 		for(i = 1; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, calculaterow, 
-				(int) (i * psize), (int) ((i + 1) * psize), N, fpisin, pih, Matrix_In, Matrix_Out, term_iteration, options);
+			pthread_create(&threads[i-1], NULL, calculaterow, params[i]);
 		}
-		calculaterow(0, psize, N, fpisin, pih, Matrix_In, Matrix_Out, term_iteration options);
 		
+		// No part-timers!
+		calculaterow(params[0]);
+		
+		// Join Threads
 		for(i = 0; i < options->number - 1; i++)
 		{
 			pthread_join(threads[i], presults[i]);
 		}
+		// Join maxresiduum
 		for(i = 0; i < options->number - 1; i++)
 		{
 			maxresiduum = (presults[i] < maxresiduum) ? maxresiduum : presults[i];
