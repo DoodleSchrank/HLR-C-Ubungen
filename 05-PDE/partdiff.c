@@ -197,18 +197,18 @@ static double calculaterow(struct pthread_parameters param)
 	double residuum = 0.0;
 	
 	/* over all rows */
-	for (int i = start; i < end; i++)
+	for (int i = param->start; i < param->end; i++)
 	{
 		double fpisin_i = 0.0;
 		if (options->inf_func == FUNC_FPISIN)
 		{
-			fpisin_i = fpisin * sin(pih * (double)i);
+			fpisin_i = param->fpisin * sin(param->pih * (double)i);
 		}
 		
 		//* over all columns */
 		for (int j = 1; j < N; j++)
 		{
-		star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+		star = 0.25 * (param->Matrix_In[i-1][j] + param->Matrix_In[i][j-1] + param->Matrix_In[i][j+1] + param->Matrix_In[i+1][j]);
 		if (options->inf_func == FUNC_FPISIN)
 		{
 			star += fpisin_i * sin(pih * (double)j);
@@ -219,7 +219,7 @@ static double calculaterow(struct pthread_parameters param)
 			residuum = (residuum < 0) ? -residuum : residuum;
 				maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
 			}
-			Matrix_Out[i][j] = star;
+			param->Matrix_Out[i][j] = star;
 		}
 	}
 	return maxresiduum;
