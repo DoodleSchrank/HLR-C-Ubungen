@@ -208,18 +208,18 @@ static double calculaterow(struct pthread_parameters *param)
 		//* over all columns */
 		for (int j = 1; j < param->N; j++)
 		{
-		star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
+		star = 0.25 * (param->Matrix_In[i-1][j] + param->Matrix_In[i][j-1] + param->Matrix_In[i][j+1] + param->Matrix_In[i+1][j]);
 		if (param->options->inf_func == FUNC_FPISIN)
 		{
 			star += fpisin_i * sin(*param->pih * (double)j);
 		}
 		if (param->options->termination == TERM_PREC || *param->term_iteration == 1)
 		{
-			residuum = *param->Matrix_In[i][j] - star;
+			residuum = param->Matrix_In[i][j] - star;
 			residuum = (residuum < 0) ? -residuum : residuum;
 				maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
 			}
-			*param->Matrix_Out[i][j] = star;
+			param->Matrix_Out[i][j] = star;
 		}
 	}
 	return maxresiduum;
@@ -252,17 +252,17 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	pthread_t threads[options->number - 1];
 	double **presults[options->number];
 	struct pthread_parameters *params[options->number];
-	for(int i = 0; i < options->number; i++)
+	for(i = 0; i < options->number; i++)
 	{
-		params[i].start = i;
-		params[i].end = (int) ((i+1)* psize);
-		params[i].N = N;
-		params[i].fpisin = *fpisin;
-		params[i].pih = *pih;
-		params[i].Matrix_In = Matrix_In;
-		params[i].Matrix_Out = *Matrix_Out;
-		params[i].term_iteration = *term_iteration;
-		params[i].options = options;
+		params[i]->start = i;
+		params[i]->end = (int) ((i+1)* psize);
+		params[i]->N = N;
+		params[i]->fpisin = *fpisin;
+		params[i]->pih = *pih;
+		params[i]->Matrix_In = Matrix_In;
+		params[i]->Matrix_Out = *Matrix_Out;
+		params[i]->term_iteration = *term_iteration;
+		params[i]->options = options;
 	}
 	
 	/* initialize m1 and m2 depending on algorithm */
@@ -293,7 +293,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 1; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, calculaterow, params[i]);
+			pthread_create(&threads[i-1], NULL, *calculaterow, params[i]);
 		}
 		
 		// No part-timers!
@@ -305,7 +305,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 			pthread_join(threads[i], *presults[i]);
 		}
 		// Join maxresiduum
-		for(i = 0; i < (int) options->number - 1; i++)
+		for(i = 0; i < options->number - 1; i++)
 		{
 			maxresiduum = (**presults[i] < maxresiduum) ? maxresiduum : **presults[i];
 		}
