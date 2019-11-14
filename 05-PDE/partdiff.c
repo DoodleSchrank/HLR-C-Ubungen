@@ -190,7 +190,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	}
 }
 
-static double calculaterow(struct pthread_parameters *param)
+static double *calculaterow(struct pthread_parameters *param)
 {
 	double maxresiduum = 0.0;
 	double star = 0.0;
@@ -262,7 +262,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i]->Matrix_In = &Matrix_In;
 		params[i]->Matrix_Out = &Matrix_Out;
 		params[i]->term_iteration = &term_iteration;
-		params[i]->options = &options;
+		params[i]->options = options;
 	}
 	
 	/* initialize m1 and m2 depending on algorithm */
@@ -293,7 +293,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 1; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, *calculaterow, params[i]);
+			pthread_create(&threads[i-1], NULL, calculaterow, params[i]);
 		}
 		
 		// No part-timers!
@@ -302,7 +302,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Join Threads
 		for(i = 0; i < options->number - 1; i++)
 		{
-			pthread_join(threads[i], **presults[i]);
+			pthread_join(threads[i], *presults[i]);
 		}
 		// Join maxresiduum
 		for(i = 0; i < options->number - 1; i++)
