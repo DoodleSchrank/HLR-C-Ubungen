@@ -257,11 +257,11 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i]->start = i;
 		params[i]->end = (int) ((i+1)* psize);
 		params[i]->N = N;
-		params[i]->fpisin = *fpisin;
-		params[i]->pih = *pih;
+		params[i]->fpisin = fpisin;
+		params[i]->pih = pih;
 		params[i]->Matrix_In = Matrix_In;
-		params[i]->Matrix_Out = *Matrix_Out;
-		params[i]->term_iteration = *term_iteration;
+		params[i]->Matrix_Out = Matrix_Out;
+		params[i]->term_iteration = term_iteration;
 		params[i]->options = options;
 	}
 	
@@ -300,7 +300,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		calculaterow(params[0]);
 		
 		// Join Threads
-		for(i = 0; i < (int) options->number - 1; i++)
+		for(i = 0; i < options->number - 1; i++)
 		{
 			pthread_join(threads[i], *presults[i]);
 		}
