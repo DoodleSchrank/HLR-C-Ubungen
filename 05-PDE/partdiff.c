@@ -222,7 +222,7 @@ void *calculaterow(struct pthread_parameters *param)
 			*param->Matrix_Out[i][j] = star;
 		}
 	}
-	pthread_exit((double *) maxresiduum);
+	pthread_exit(maxresiduum);
 }
 
 
