@@ -190,7 +190,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	}
 }
 
-static double *calculaterow(struct pthread_parameters *param)
+void *calculaterow(struct pthread_parameters *param)
 {
 	double maxresiduum = 0.0;
 	double star = 0.0;
@@ -222,7 +222,7 @@ static double *calculaterow(struct pthread_parameters *param)
 			*param->Matrix_Out[i][j] = star;
 		}
 	}
-	return &maxresiduum;
+	pthread_exit(*maxresiduum);
 }
 
 
@@ -250,8 +250,9 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	double **Matrix_In;
 
 	pthread_t threads[options->number - 1];
-	double **presults[options->number];
+	double &presults[options->number];
 	struct pthread_parameters *params[options->number];
+	double *tempmaxresiduum;
 	for(i = 0; i < options->number; i++)
 	{
 		params[i]->start = i;
@@ -299,15 +300,11 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// No part-timers!
 		calculaterow(params[0]);
 		
-		// Join Threads
+		// Join Threads and maxresiduum
 		for(i = 0; i < options->number - 1; i++)
 		{
-			pthread_join(threads[i], *presults[i]);
-		}
-		// Join maxresiduum
-		for(i = 0; i < options->number - 1; i++)
-		{
-			maxresiduum = (**presults[i] < maxresiduum) ? maxresiduum : **presults[i];
+			pthread_join(threads[i], &tempmaxresiduum);
+			maxresiduum = (tempmaxresiduum < maxresiduum) ? maxresiduum : tempmaxresiduum;
 		}
 		
 		results->stat_iteration++;
