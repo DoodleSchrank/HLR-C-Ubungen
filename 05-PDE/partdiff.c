@@ -222,7 +222,7 @@ static double *calculaterow(struct pthread_parameters *param)
 			*param->Matrix_Out[i][j] = star;
 		}
 	}
-	return maxresiduum;
+	return *maxresiduum;
 }
 
 
@@ -293,7 +293,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 1; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, calculaterow, params[i]);
+			pthread_create(&threads[i-1], NULL, *calculaterow, params[i]);
 		}
 		
 		// No part-timers!
