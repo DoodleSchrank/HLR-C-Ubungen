@@ -190,9 +190,11 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 	}
 }
 
-void *calculaterow(struct pthread_parameters *param)
+void *calculaterow(void *params)
 {
-	double maxresiduum = 0.0;
+	struct pthread_parameters *param = (struct pthread_parameters*) params;
+	double *maxresiduum = malloc(sizeof(double));
+	*maxresiduum = 0.0;
 	double star = 0.0;
 	double residuum = 0.0;
 	
@@ -217,12 +219,13 @@ void *calculaterow(struct pthread_parameters *param)
 		{
 			residuum = *param->Matrix_In[i][j] - star;
 			residuum = (residuum < 0) ? -residuum : residuum;
-				maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+				*maxresiduum = (residuum < *maxresiduum) ? *maxresiduum : residuum;
 			}
 			*param->Matrix_Out[i][j] = star;
 		}
 	}
-	pthread_exit(maxresiduum);
+
+	pthread_exit((void *) maxresiduum);
 }
 
 
@@ -251,7 +254,9 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	pthread_t threads[options->number - 1];
 	struct pthread_parameters *params[options->number];
-	double *tempmaxresiduum;
+	void *maxPointer;
+	double maxTemp;
+
 	for(i = 0; i < options->number; i++)
 	{
 		params[i]->start = i;
@@ -293,7 +298,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 1; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, calculaterow, *params[i]);
+			pthread_create(&threads[i-1], NULL, calculaterow, (void *) params[i]);
 		}
 		
 		// No part-timers!
@@ -302,8 +307,10 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Join Threads and maxresiduum
 		for(i = 0; i < options->number - 1; i++)
 		{
-			pthread_join(threads[i], &tempmaxresiduum);
-			maxresiduum = (*tempmaxresiduum < maxresiduum) ? maxresiduum : *tempmaxresiduum;
+			pthread_join(threads[i], maxPointer);
+			maxTemp = *(double *) maxPointer;
+			maxresiduum = (maxTemp < maxresiduum) ? maxresiduum : maxTemp;
+			free(maxPointer);
 		}
 		
 		results->stat_iteration++;
