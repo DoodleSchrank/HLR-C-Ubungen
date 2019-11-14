@@ -37,8 +37,8 @@ struct pthread_parameters
 	int N;
 	double *fpisin;
 	double *pih;
-	double **Matrix_In;
-	double **Matrix_Out;
+	double ***Matrix_In;
+	double ***Matrix_Out;
 	int *term_iteration;
 	struct options const *options;
 };
@@ -257,11 +257,11 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i]->start = i;
 		params[i]->end = (int) ((i+1)* psize);
 		params[i]->N = N;
-		params[i]->fpisin = fpisin;
-		params[i]->pih = pih;
-		params[i]->Matrix_In = Matrix_In;
-		params[i]->Matrix_Out = Matrix_Out;
-		params[i]->term_iteration = term_iteration;
+		params[i]->fpisin = *fpisin;
+		params[i]->pih = *pih;
+		params[i]->Matrix_In = *Matrix_In;
+		params[i]->Matrix_Out = *Matrix_Out;
+		params[i]->term_iteration = *term_iteration;
 		params[i]->options = options;
 	}
 	
@@ -302,7 +302,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Join Threads
 		for(i = 0; i < options->number - 1; i++)
 		{
-			pthread_join(threads[i], *presults[i]);
+			pthread_join(threads[i], presults[i]);
 		}
 		// Join maxresiduum
 		for(i = 0; i < options->number - 1; i++)
