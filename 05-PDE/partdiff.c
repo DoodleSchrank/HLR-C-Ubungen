@@ -250,7 +250,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	double **Matrix_In;
 
 	pthread_t threads[options->number - 1];
-	double &presults[options->number];
 	struct pthread_parameters *params[options->number];
 	double *tempmaxresiduum;
 	for(i = 0; i < options->number; i++)
@@ -304,7 +303,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		for(i = 0; i < options->number - 1; i++)
 		{
 			pthread_join(threads[i], &tempmaxresiduum);
-			maxresiduum = (tempmaxresiduum < maxresiduum) ? maxresiduum : tempmaxresiduum;
+			maxresiduum = (*tempmaxresiduum < maxresiduum) ? maxresiduum : *tempmaxresiduum;
 		}
 		
 		results->stat_iteration++;
