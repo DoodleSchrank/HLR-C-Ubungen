@@ -192,7 +192,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 
 void *calculaterow(void *params)
 {
-	struct pthread_parameters *param = (struct pthread_parameters*) params;
+	struct pthread_parameters *param = (struct pthread_parameters *) params;
 	double *maxresiduum = malloc(sizeof(double));
 	*maxresiduum = 0.0;
 	double star = 0.0;
@@ -252,22 +252,21 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	double **Matrix_Out;
 	double **Matrix_In;
 
-	pthread_t threads[options->number - 1];
-	struct pthread_parameters *params[options->number];
-	void *maxPointer;
-	double maxTemp;
+	pthread_t threads[options->number];
+	struct pthread_parameters params[options->number];
+	double *maxTemp;
 
 	for(i = 0; i < options->number; i++)
 	{
-		params[i]->start = i;
-		params[i]->end = (int) ((i+1)* psize);
-		params[i]->N = N;
-		params[i]->fpisin = &fpisin;
-		params[i]->pih = &pih;
-		params[i]->Matrix_In = &Matrix_In;
-		params[i]->Matrix_Out = &Matrix_Out;
-		params[i]->term_iteration = &term_iteration;
-		params[i]->options = options;
+		params[i].start = i;
+		params[i].end = (int) ((i+1)* psize);
+		params[i].N = N;
+		params[i].fpisin = &fpisin;
+		params[i].pih = &pih;
+		params[i].Matrix_In = &Matrix_In;
+		params[i].Matrix_Out = &Matrix_Out;
+		params[i].term_iteration = &term_iteration;
+		params[i].options = options;
 	}
 	
 	/* initialize m1 and m2 depending on algorithm */
@@ -296,21 +295,20 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		maxresiduum = 0;
 		
 		// Gabel
-		for(i = 1; i < options->number; i++)
+		for(i = 0; i < options->number; i++)
 		{
-			pthread_create(&threads[i-1], NULL, calculaterow, (void *) params[i]);
+			pthread_create(&threads[i], NULL, calculaterow, &params[i]);
 		}
 		
 		// No part-timers!
-		calculaterow(params[0]);
+		//calculaterow(&params[0]);
 		
 		// Join Threads and maxresiduum
-		for(i = 0; i < options->number - 1; i++)
+		for(i = 0; i < options->number; i++)
 		{
-			pthread_join(threads[i], maxPointer);
-			maxTemp = *(double *) maxPointer;
-			maxresiduum = (maxTemp < maxresiduum) ? maxresiduum : maxTemp;
-			free(maxPointer);
+			pthread_join(threads[i], &maxTemp);
+			maxresiduum = (*maxTemp < maxresiduum) ? maxresiduum : *maxTemp;
+			free(maxTemp);
 		}
 		
 		results->stat_iteration++;
