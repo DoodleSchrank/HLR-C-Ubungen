@@ -40,7 +40,8 @@ struct pthread_parameters
 	double ***Matrix_In;
 	double ***Matrix_Out;
 	int *term_iteration;
-	struct options const *options;
+	uint64_t const *inf_func;
+	uint64_t const *termination;
 };
 
 struct calculation_arguments
@@ -193,7 +194,6 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 void *calculaterow(void *params)
 {
 	struct pthread_parameters *param = (struct pthread_parameters *) params;
-	printf("%d, %d\n", param->start, param->end);
 	double *maxresiduum = malloc(sizeof(double));
 	*maxresiduum = 0.0;
 	double star = 0.0;
@@ -203,20 +203,19 @@ void *calculaterow(void *params)
 	for (int i = param->start; i < param->end; i++)
 	{
 		double fpisin_i = 0.0;
-		if (param->options->inf_func == FUNC_FPISIN)
+		if (*param->inf_func == FUNC_FPISIN)
 		{
 			fpisin_i = *param->fpisin * sin(*param->pih * (double)i);
 		}
-		
 		//* over all columns */
 		for (int j = 1; j < param->N; j++)
 		{
 			star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
-			if (param->options->inf_func == FUNC_FPISIN)
+			if (*param->inf_func == FUNC_FPISIN)
 			{
 				star += fpisin_i * sin(*param->pih * (double)j);
 			}
-			if (param->options->termination == TERM_PREC || *param->term_iteration == 1)
+			if (*param->termination == TERM_PREC || *param->term_iteration == 1)
 			{
 				residuum = *param->Matrix_In[i][j] - star;
 				residuum = (residuum < 0) ? -residuum : residuum;
@@ -250,26 +249,11 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	int term_iteration = options->term_iteration;
 	int psize = N / options->number;
 	
-	double **Matrix_Out;
-	double **Matrix_In;
-
 	pthread_t threads[options->number];
 	struct pthread_parameters params[options->number];
 	double *maxTemp;
 
-	for(i = 0; i < options->number; i++)
-	{
-		params[i].start = (int) (i * psize);
-		params[i].end = (int) ((i + 1) * psize);
-		params[i].N = N;
-		params[i].fpisin = &fpisin;
-		params[i].pih = &pih;
-		params[i].Matrix_In = &Matrix_In;
-		params[i].Matrix_Out = &Matrix_Out;
-		params[i].term_iteration = &term_iteration;
-		params[i].options = options;
-	}
-	
+
 	/* initialize m1 and m2 depending on algorithm */
 	if (options->method == METH_JACOBI)
 	{
@@ -282,6 +266,19 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		m2 = 0;
 	}
 
+	for(i = 0; i < options->number; i++)
+	{
+		params[i].start = (int) (1 + i * psize);
+		params[i].end = (int) ((i + 1) * psize);
+		params[i].N = N;
+		params[i].fpisin = &fpisin;
+		params[i].pih = &pih;
+		params[i].Matrix_In = &arguments->Matrix[m1];
+		params[i].Matrix_Out = &arguments->Matrix[m2];
+		params[i].term_iteration = &term_iteration;
+		params[i].inf_func = &options->inf_func;
+		params[i].termination = &options->termination;
+	}
 	if (options->inf_func == FUNC_FPISIN)
 	{
 		pih = PI * h;
@@ -290,9 +287,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	while (term_iteration > 0)
 	{
-		Matrix_Out = arguments->Matrix[m1];
-		Matrix_In  = arguments->Matrix[m2];
-
 		maxresiduum = 0;
 		
 		// Gabel
