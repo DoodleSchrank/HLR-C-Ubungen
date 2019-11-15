@@ -37,8 +37,8 @@ struct pthread_parameters
 	int N;
 	double *fpisin;
 	double *pih;
-	double ***Matrix_In;
-	double ***Matrix_Out;
+	double **Matrix_In;
+	double **Matrix_Out;
 	int *term_iteration;
 	uint64_t const *inf_func;
 	uint64_t const *termination;
@@ -198,6 +198,9 @@ void *calculaterow(void *params)
 	*maxresiduum = 0.0;
 	double star = 0.0;
 	double residuum = 0.0;
+
+	double **Matrix_In = param->Matrix_In;
+	double **Matrix_Out = param->Matrix_Out;
 	
 	/* over all rows */
 	for (int i = param->start; i < param->end; i++)
@@ -210,18 +213,18 @@ void *calculaterow(void *params)
 		//* over all columns */
 		for (int j = 1; j < param->N; j++)
 		{
-			star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
+			star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
 			if (*param->inf_func == FUNC_FPISIN)
 			{
 				star += fpisin_i * sin(*param->pih * (double)j);
 			}
 			if (*param->termination == TERM_PREC || *param->term_iteration == 1)
 			{
-				residuum = *param->Matrix_In[i][j] - star;
+				residuum = Matrix_In[i][j] - star;
 				residuum = (residuum < 0) ? -residuum : residuum;
 				*maxresiduum = (residuum < *maxresiduum) ? *maxresiduum : residuum;
 			}
-			*param->Matrix_Out[i][j] = star;
+			Matrix_Out[i][j] = star;
 		}
 	}
 
@@ -273,8 +276,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i].N = N;
 		params[i].fpisin = &fpisin;
 		params[i].pih = &pih;
-		params[i].Matrix_In = &arguments->Matrix[m1];
-		params[i].Matrix_Out = &arguments->Matrix[m2];
 		params[i].term_iteration = &term_iteration;
 		params[i].inf_func = &options->inf_func;
 		params[i].termination = &options->termination;
@@ -292,6 +293,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 0; i < options->number; i++)
 		{
+			params[i].Matrix_In = arguments->Matrix[m1];
+			params[i].Matrix_Out = arguments->Matrix[m2];
 			pthread_create(&threads[i], NULL, calculaterow, &params[i]);
 		}
 		
