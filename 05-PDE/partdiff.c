@@ -300,13 +300,10 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 			pthread_create(&threads[i], NULL, calculaterow, &params[i]);
 		}
 		
-		// No part-timers!
-		//calculaterow(&params[0]);
-		
 		// Join Threads and maxresiduum
 		for(i = 0; i < options->number; i++)
 		{
-			pthread_join(threads[i], &maxTemp);
+			pthread_join(threads[i], (void **)&maxTemp);
 			maxresiduum = (*maxTemp < maxresiduum) ? maxresiduum : *maxTemp;
 			free(maxTemp);
 		}
