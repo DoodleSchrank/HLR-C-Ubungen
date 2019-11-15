@@ -193,6 +193,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 void *calculaterow(void *params)
 {
 	struct pthread_parameters *param = (struct pthread_parameters *) params;
+	printf("%d, %d\n", param->start, param->end);
 	double *maxresiduum = malloc(sizeof(double));
 	*maxresiduum = 0.0;
 	double star = 0.0;
@@ -210,15 +211,15 @@ void *calculaterow(void *params)
 		//* over all columns */
 		for (int j = 1; j < param->N; j++)
 		{
-		star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
-		if (param->options->inf_func == FUNC_FPISIN)
-		{
-			star += fpisin_i * sin(*param->pih * (double)j);
-		}
-		if (param->options->termination == TERM_PREC || *param->term_iteration == 1)
-		{
-			residuum = *param->Matrix_In[i][j] - star;
-			residuum = (residuum < 0) ? -residuum : residuum;
+			star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
+			if (param->options->inf_func == FUNC_FPISIN)
+			{
+				star += fpisin_i * sin(*param->pih * (double)j);
+			}
+			if (param->options->termination == TERM_PREC || *param->term_iteration == 1)
+			{
+				residuum = *param->Matrix_In[i][j] - star;
+				residuum = (residuum < 0) ? -residuum : residuum;
 				*maxresiduum = (residuum < *maxresiduum) ? *maxresiduum : residuum;
 			}
 			*param->Matrix_Out[i][j] = star;
@@ -247,7 +248,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	double fpisin = 0.0;
 
 	int term_iteration = options->term_iteration;
-	int psize = options->number / N;
+	int psize = N / options->number;
 	
 	double **Matrix_Out;
 	double **Matrix_In;
@@ -258,8 +259,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	for(i = 0; i < options->number; i++)
 	{
-		params[i].start = i;
-		params[i].end = (int) ((i+1)* psize);
+		params[i].start = (int) (i * psize);
+		params[i].end = (int) ((i + 1) * psize);
 		params[i].N = N;
 		params[i].fpisin = &fpisin;
 		params[i].pih = &pih;
