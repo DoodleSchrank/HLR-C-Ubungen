@@ -200,10 +200,6 @@ void *calculaterow(void *params)
 	// init some var
 	double star = 0.0;
 	double residuum = 0.0;
-
-	// map pointers for easier reading
-	double **Matrix_In = *param->Matrix_In;
-	double **Matrix_Out = *param->Matrix_Out;
 	
 	/* over all rows */
 	for (int i = param->start; i < param->end; i++)
@@ -216,18 +212,18 @@ void *calculaterow(void *params)
 		//* over all columns */
 		for (int j = 1; j < param->N; j++)
 		{
-			star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+			star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
 			if (*param->inf_func == FUNC_FPISIN)
 			{
 				star += fpisin_i * sin(*param->pih * (double)j);
 			}
 			if (*param->termination == TERM_PREC || *param->term_iteration == 1)
 			{
-				residuum = Matrix_In[i][j] - star;
+				residuum = *param->Matrix_In[i][j] - star;
 				residuum = (residuum < 0) ? -residuum : residuum;
 				*param->maxresiduum = (residuum < *param->maxresiduum) ? *param->maxresiduum : residuum;
 			}
-			Matrix_Out[i][j] = star;
+			*param->Matrix_Out[i][j] = star;
 		}
 	}
 
