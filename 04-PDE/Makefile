@@ -12,6 +12,9 @@ OBJS = askparams.o partdiff-openmp-zeilen.o partdiff-openmp-spalten.o partdiff-o
 # Targets ...
 all: partdiff-openmp partdiff-openmp-zeilen partdiff-openmp-spalten partdiff-openmp-element
 
+partdiff: partdiff.o askparams.o
+	$(CC) $(LFLAGS) -o $@ partdiff.o askparams.o $(LIBS)
+
 partdiff-openmp: partdiff-openmp-zeilen.o askparams.o
 	$(CC) $(LFLAGS) -o $@ partdiff-openmp-zeilen.o askparams.o $(LIBS)
 
@@ -26,6 +29,8 @@ partdiff-openmp-spalten.o: partdiff.c
 	$(CC) -c $(CFLAGS) -D COLUMN $< -o $@
 partdiff-openmp-element.o: partdiff.c
 	$(CC) -c $(CFLAGS) -D SINGLE $< -o $@
+
+
 
 askparams.o: askparams.c
 

@@ -1,10 +1,8 @@
 #!/bin/bash
-#SBATCH --nodes=3
+#SBATCH --nodes=1
 #SBATCH -n 3
 #SBATCH --partition=west
 #SBATCH --output=output.out
 
 
-srun partdiff 12 2 512 2 2 512
-echo "fertig" > fertig
-
+srun partdiff 12 2 512 2 2 1024
