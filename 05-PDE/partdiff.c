@@ -253,14 +253,14 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	int term_iteration = options->term_iteration;
 	
 	// if number > N, only N threads will be started
-	int threads = (N > options->number) ? (int) options->number : N;
+	int threadnum = (N > options->number) ? (int) options->number : N;
 	
 	// size of individual threadload
-	int psize = N / threads;
+	int psize = N / threadnum;
 	
 	// init threadarray and parameter structure
-	pthread_t threads[threads];
-	struct pthread_parameters params[threads];
+	pthread_t threads[threadnum];
+	struct pthread_parameters params[threadnum];
 	// init returnaddress
 	double *maxTemp;
 
@@ -278,7 +278,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	}
 
 	// set params(mostly pointers) for each thread where thread[i] gets params[i]
-	for(i = 0; i < threads; i++)
+	for(i = 0; i < threadnum; i++)
 	{
 		// loop starts at 1 or beginning of chunk
 		params[i].start = (i == 0) ? 1 : (int) (i * psize);
@@ -289,7 +289,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i].term_iteration = &term_iteration;
 		params[i].inf_func = &options->inf_func;
 		params[i].termination = &options->termination;
-		params[i].maxresiduum = malloc(sizeof(double);
+		params[i].maxresiduum = malloc(sizeof(double));
 		*params[i].maxresiduum = 0.0;
 	}
 	if (options->inf_func == FUNC_FPISIN)
@@ -303,7 +303,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		maxresiduum = 0;
 		
 		// Gabel
-		for(i = 0; i < options->number; i++)
+		for(i = 0; i < threadnum; i++)
 		{
 			params[i].Matrix_Out = arguments->Matrix[m1];
 			params[i].Matrix_In = arguments->Matrix[m2];
@@ -311,7 +311,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		}
 		
 		// Löffel
-		for(i = 0; i < options->number; i++)
+		for(i = 0; i < threadnum; i++)
 		{
 			pthread_join(threads[i], (void **)&maxTemp);
 			maxresiduum = (*maxTemp < maxresiduum) ? maxresiduum : *maxTemp;
@@ -342,7 +342,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	// free the civilians! now!
 	for(i = 0; i < options->number; i++)
 	{
-		free(*params[i].maxresiduum);
+		free(params[i].maxresiduum);
 	}
 
 	results->m = m2;
