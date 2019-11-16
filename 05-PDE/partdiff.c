@@ -271,7 +271,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	for(i = 0; i < options->number; i++)
 	{
-		params[i].start = (int) (1 + i * psize);
+		params[i].start = (i == 0) ? 1 : (int) (i * psize);
 		params[i].end = (int) ((i + 1) * psize);
 		params[i].N = N;
 		params[i].fpisin = &fpisin;
