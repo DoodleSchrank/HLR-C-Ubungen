@@ -272,7 +272,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	for(i = 0; i < options->number; i++)
 	{
 		params[i].start = (i == 0) ? 1 : (int) (i * psize);
-		params[i].end = (int) ((i + 1) * psize);
+		params[i].end = (i < options->number - 1) ? (int) ((i + 1) * psize) : N;
 		params[i].N = N;
 		params[i].fpisin = &fpisin;
 		params[i].pih = &pih;
@@ -293,8 +293,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 0; i < options->number; i++)
 		{
-			params[i].Matrix_In = arguments->Matrix[m1];
-			params[i].Matrix_Out = arguments->Matrix[m2];
+			params[i].Matrix_Out = arguments->Matrix[m1];
+			params[i].Matrix_In = arguments->Matrix[m2];
 			pthread_create(&threads[i], NULL, calculaterow, &params[i]);
 		}
 		
