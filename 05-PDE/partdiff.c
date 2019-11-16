@@ -30,6 +30,7 @@
 
 #include "partdiff.h"
 
+// Parameters for thread function
 struct pthread_parameters
 {
 	int start;
@@ -194,12 +195,13 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 
 void *calculaterow(void *params)
 {
+	// map voidpointer to correct struct
 	struct pthread_parameters *param = (struct pthread_parameters *) params;
-	double *maxresiduum = malloc(sizeof(double));
-	*maxresiduum = 0.0;
+	// init some var
 	double star = 0.0;
 	double residuum = 0.0;
 
+	// map pointers for easier reading
 	double **Matrix_In = *param->Matrix_In;
 	double **Matrix_Out = *param->Matrix_Out;
 	
@@ -223,13 +225,13 @@ void *calculaterow(void *params)
 			{
 				residuum = Matrix_In[i][j] - star;
 				residuum = (residuum < 0) ? -residuum : residuum;
-				*maxresiduum = (residuum < *maxresiduum) ? *maxresiduum : residuum;
+				*param->maxresiduum = (residuum < *param->maxresiduum) ? *param->maxresiduum : residuum;
 			}
 			Matrix_Out[i][j] = star;
 		}
 	}
 
-	pthread_exit((void *) maxresiduum);
+	pthread_exit((void *) param->maxresiduum);
 }
 
 
@@ -276,13 +278,15 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		m1 = 0;
 		m2 = 0;
 	}
+	
+	// initialize pointers to matrices
 	double **Matrix_Out = arguments->Matrix[m1];
 	double **Matrix_In = arguments->Matrix[m2];
 
 	// set params(mostly pointers) for each thread where thread[i] gets params[i]
 	for(i = 0; i < threadnum; i++)
 	{
-		// loop starts at 1 or beginning of chunk
+		// loop in calculaterow starts at 1 or beginning of chunk
 		params[i].start = (i == 0) ? 1 : (int) (i * psize);
 		params[i].end = (int) ((i + 1) * psize);
 		params[i].N = N;
@@ -326,6 +330,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		i = m1;
 		m1 = m2;
 		m2 = i;
+		// fix pointers
 		Matrix_Out = arguments->Matrix[m1];
 		Matrix_In = arguments->Matrix[m2];
 		
