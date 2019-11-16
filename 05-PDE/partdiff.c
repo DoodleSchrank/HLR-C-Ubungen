@@ -37,8 +37,8 @@ struct pthread_parameters
 	int N;
 	double *fpisin;
 	double *pih;
-	double **Matrix_In;
-	double **Matrix_Out;
+	double ***Matrix_In;
+	double ***Matrix_Out;
 	int *term_iteration;
 	uint64_t const *inf_func;
 	uint64_t const *termination;
@@ -200,8 +200,8 @@ void *calculaterow(void *params)
 	double star = 0.0;
 	double residuum = 0.0;
 
-	double **Matrix_In = param->Matrix_In;
-	double **Matrix_Out = param->Matrix_Out;
+	double **Matrix_In = *param->Matrix_In;
+	double **Matrix_Out = *param->Matrix_Out;
 	
 	/* over all rows */
 	for (int i = param->start; i < param->end; i++)
@@ -293,8 +293,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i].termination = &options->termination;
 		params[i].maxresiduum = malloc(sizeof(double));
 		*params[i].maxresiduum = 0.0;
-		params[i].Matrix_Out = Matrix_Out;
-		params[i].Matrix_In = Matrix_In;
+		params[i].Matrix_Out = &Matrix_Out;
+		params[i].Matrix_In = &Matrix_In;
 	}
 	if (options->inf_func == FUNC_FPISIN)
 	{
