@@ -253,7 +253,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	int term_iteration = options->term_iteration;
 	
 	// if number > N, only N threads will be started
-	int threadnum = (N > options->number) ? (int) options->number : N;
+	int threadnum = (N > (int) options->number) ? (int) options->number : N;
 	
 	// size of individual threadload
 	int psize = N / threadnum;
@@ -340,7 +340,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	}
 	
 	// free the civilians! now!
-	for(i = 0; i < options->number; i++)
+	for(i = 0; i < threadnum; i++)
 	{
 		free(params[i].maxresiduum);
 	}
