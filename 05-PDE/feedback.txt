@@ -17,4 +17,4 @@ Was könnten wir verbessern?
 -
 
 Was hat Ihnen besonders gut gefallen?
-omp (nein, nicht pthreads)
+OpenMP (nein, nicht pthreads)
