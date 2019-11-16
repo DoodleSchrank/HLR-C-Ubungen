@@ -276,6 +276,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		m1 = 0;
 		m2 = 0;
 	}
+	double **Matrix_Out = arguments->Matrix[m1];
+	double **Matrix_In = arguments->Matrix[m2];
 
 	// set params(mostly pointers) for each thread where thread[i] gets params[i]
 	for(i = 0; i < threadnum; i++)
@@ -291,6 +293,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i].termination = &options->termination;
 		params[i].maxresiduum = malloc(sizeof(double));
 		*params[i].maxresiduum = 0.0;
+		params[i].Matrix_Out = Matrix_Out;
+		params[i].Matrix_In = Matrix_In;
 	}
 	if (options->inf_func == FUNC_FPISIN)
 	{
@@ -305,8 +309,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 0; i < threadnum; i++)
 		{
-			params[i].Matrix_Out = arguments->Matrix[m1];
-			params[i].Matrix_In = arguments->Matrix[m2];
 			pthread_create(&threads[i], NULL, calculaterow, &params[i]);
 		}
 		
@@ -324,6 +326,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		i = m1;
 		m1 = m2;
 		m2 = i;
+		Matrix_Out = arguments->Matrix[m1];
+		Matrix_In = arguments->Matrix[m2];
 		
 		/* check for stopping calculation depending on termination method */
 		if (options->termination == TERM_PREC)
