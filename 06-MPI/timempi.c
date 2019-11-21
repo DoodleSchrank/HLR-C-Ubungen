@@ -28,7 +28,7 @@ void sklave()
 	
 	struct data
 	{
-		char host = hostname;
+		char *host = hostname;
 		long int time = tv.tv_usec;
 	} data;
 	MPI_Send(&data, 1, datastruct, 0, tag, MPI_COMM_WORLD);
@@ -44,8 +44,8 @@ int main(int argc, char* argv[])
 
 	// define MPI_struct
 	static MPI_Datatype datastruct;
-	int blocklength[] = {1, 1};
-	long int displacements[] = {0, 1};
+	int blocklength[] = {256, 1};
+	long int displacements[] = {0, sizeof(char[256]};
 	MPI_Datatype types[] = {MPI_CHAR, MPI_LONG};
 
 	MPI_Type_struct(2, blocklength, displacements, types, &datastruct);
