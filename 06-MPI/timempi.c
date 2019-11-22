@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include <sys/time.h>
 #include <string.h>
-#include <stdlib.h> 
-
+#include <stdlib.h>
+#include <time.h>
 
 void meister(int numThreads)
 {
@@ -18,36 +18,28 @@ void meister(int numThreads)
 		MPI_Recv(&data, 256, MPI_CHAR, i, 0, MPI_COMM_WORLD , MPI_STATUS_IGNORE);
 		printf("%s\n", data);
 	}
-
-	// push threads over the brink
-	char data2 = 't';
-	for(i = 1; i < numThreads; i++)
-	{
-		MPI_Send(&data2, 1, MPI_CHAR, i, 0, MPI_COMM_WORLD);
-	}
 }
 
 void subordinat()
 {
-	// define some integral variables
-	struct timeval tv;
-	char data[256], time[256], hostname[HOST_NAME_MAX], data2;
+	// define some integral charrays
+	char data[256], timestr[256], hostname[256];
 
 	// get hostname and time of day -- with failsafe, yeah!
-	if(gethostname(hostname, sizeof(hostname)) != 0) strcat(hostname, "Error");
-	if(gettimeofday(&tv, NULL) != 0) tv.tv_usec = 0;
+	int retval = gethostname(data, sizeof(data));
+	if (retval != 0) strcat(hostname, "Error");
+	// get time
+	time_t now;
+	time(&now);
+	struct tm *loctime = localtime(&now);
 	
 	// string magic, wuuw
-	strcat(hostname, ": ");
-	sprintf(time, "%ld", tv.tv_sec);
-	strcat(data, hostname);
-	strcat(data, time);
+	strcat(data, ": ");
+	sprintf(timestr, "%s", asctime(loctime));
+	strcat(data, timestr);
 	
 	// send nu.. err data
 	MPI_Send(&data, 256, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
-	
-	// wait for the last push towards the brink
-	MPI_Recv(&data2, 1, MPI_CHAR, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 }
 
 int main(int argc, char* argv[])
@@ -60,9 +52,11 @@ int main(int argc, char* argv[])
 	MPI_Comm_size(MPI_COMM_WORLD, &numThreads);
 	
 	// Das klassische Meister-Subordinaten Prinzip
-	if(myid != 0) meister(numThreads);
+	if(myid == 0) meister(numThreads);
 	else subordinat();
 	
+	MPI_Barrier(MPI_COMM_WORLD);
+
 	MPI_Finalize();
 	
 	// build string with stringmagic

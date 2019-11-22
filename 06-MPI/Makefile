@@ -10,7 +10,7 @@ TGTS = timempi
 OBJS = timempi.o
 
 # Targets ..
-all: timempi
+all: timempi timempi_gather
 
 timempi: $(OBJS) Makefile
 	$(CC) $(LFLAGS) -o $@ $(OBJS) $(LIBS)
