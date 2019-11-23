@@ -1,0 +1,9 @@
+#!/bin/bash
+#SBATCH -N 3 
+#SBATCH -n 3
+#SBATCH --partition=west
+#SBATCH --output=%j
+
+
+srun mpirun ./timempi
+

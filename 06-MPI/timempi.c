@@ -23,23 +23,21 @@ void meister(int numThreads)
 void subordinat()
 {
 	// define some integral charrays
-	char data[256], timestr[256], hostname[256];
+	int length = 64;
+	char data[3 * length], timestr[length], hostname[length];
+	struct timeval tv;
 
 	// get hostname and time of day -- with failsafe, yeah!
-	int retval = gethostname(data, sizeof(data));
+	int retval = gethostname(hostname, sizeof(hostname));
 	if (retval != 0) strcat(hostname, "Error");
-	// get time
-	time_t now;
-	time(&now);
-	struct tm *loctime = localtime(&now);
+	retval = gettimeofday(&tv, NULL);
 	
 	// string magic, wuuw
-	strcat(data, ": ");
-	sprintf(timestr, "%s", asctime(loctime));
-	strcat(data, timestr);
+	strftime(timestr, length,  "%Y-%m-%d %T", localtime(&tv.tv_sec));
+	snprintf(data, sizeof(data), "%s: %s.%ld\n", hostname, timestr, tv.tv_usec);
 	
 	// send nu.. err data
-	MPI_Send(&data, 256, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
+	MPI_Send(&data, 3 * length, MPI_CHAR, 0, 0, MPI_COMM_WORLD);
 }
 
 int main(int argc, char* argv[])

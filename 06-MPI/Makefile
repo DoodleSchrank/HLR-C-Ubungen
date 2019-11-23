@@ -1,26 +1,26 @@
-# Common definitions
+RM= rm -rf
 CC = mpicc
+CFLAGS = -Wpedantic -Wall -Wextra -ggdb -Og
+INCLUDES =
+LFLAGS =
+LIBS = -lm
 
-# Compiler flags, paths and libraries
-CFLAGS = -std=c11 -pedantic -Wall -Wextra -O3 -ggdb
-LFLAGS = $(CFLAGS)
-LIBS   = -lm
+SRCS := timempi.c timempi2.c 
+OBJS = $(SRCS:.c=.o)
+MAIN = $(SRCS:.c=.x)
 
-TGTS = timempi
-OBJS = timempi.o
+all: $(MAIN)
+	@echo  Build ${MAIN}
 
-# Targets ..
-all: timempi timempi_gather
+$(MAIN):%.x: %.o
+	@echo Building $@
+	$(CC) $(CFLAGS) $(INCLUDES) $(LFLAGS) $(LIBS) -o $@ $<
 
-timempi: $(OBJS) Makefile
-	$(CC) $(LFLAGS) -o $@ $(OBJS) $(LIBS)
-
-timempi.o: timempi.c Makefile
-
-# Rule to create *.o from *.c
 %.o: %.c
-	$(CC) -c $(CFLAGS) $*.c
+	$(CC) $(CFLAGS) $(INCLUDES) -c $<
+
+.PHONY: clean cleanall
 
 clean:
 	$(RM) $(OBJS)
-	$(RM) $(TGTS)
+	$(RM) $(MAIN)
