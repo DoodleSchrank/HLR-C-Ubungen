@@ -20,7 +20,7 @@ void meister(int numThreads)
 	}
 }
 
-void subordinat()
+void sklave()
 {
 	// define some integral charrays
 	int length = 64;
@@ -49,9 +49,9 @@ int main(int argc, char* argv[])
 	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
 	MPI_Comm_size(MPI_COMM_WORLD, &numThreads);
 	
-	// Das klassische Meister-Subordinaten Prinzip
+	// Das klassische Meister-Sklaven Prinzip
 	if(myid == 0) meister(numThreads);
-	else subordinat();
+	else sklave();
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
