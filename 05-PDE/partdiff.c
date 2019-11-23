@@ -38,8 +38,8 @@ struct pthread_parameters
 	int N;
 	double *fpisin;
 	double *pih;
-	double ***Matrix_In;
-	double ***Matrix_Out;
+	double **Matrix_In;
+	double **Matrix_Out;
 	int *term_iteration;
 	uint64_t const *inf_func;
 	uint64_t const *termination;
@@ -212,18 +212,18 @@ void *calculaterow(void *params)
 		//* over all columns */
 		for (int j = 1; j < param->N; j++)
 		{
-			star = 0.25 * (*param->Matrix_In[i-1][j] + *param->Matrix_In[i][j-1] + *param->Matrix_In[i][j+1] + *param->Matrix_In[i+1][j]);
+			star = 0.25 * (param->Matrix_In[i-1][j] + param->Matrix_In[i][j-1] + param->Matrix_In[i][j+1] + param->Matrix_In[i+1][j]);
 			if (*param->inf_func == FUNC_FPISIN)
 			{
 				star += fpisin_i * sin(*param->pih * (double)j);
 			}
 			if (*param->termination == TERM_PREC || *param->term_iteration == 1)
 			{
-				residuum = *param->Matrix_In[i][j] - star;
+				residuum = param->Matrix_In[i][j] - star;
 				residuum = (residuum < 0) ? -residuum : residuum;
 				*param->maxresiduum = (residuum < *param->maxresiduum) ? *param->maxresiduum : residuum;
 			}
-			*param->Matrix_Out[i][j] = star;
+			param->Matrix_Out[i][j] = star;
 		}
 	}
 
@@ -293,8 +293,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		params[i].termination = &options->termination;
 		params[i].maxresiduum = malloc(sizeof(double));
 		*params[i].maxresiduum = 0.0;
-		params[i].Matrix_Out = &Matrix_Out;
-		params[i].Matrix_In = &Matrix_In;
 	}
 	if (options->inf_func == FUNC_FPISIN)
 	{
@@ -309,6 +307,8 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 		// Gabel
 		for(i = 0; i < threadnum; i++)
 		{
+			params[i].Matrix_Out = Matrix_Out;
+			params[i].Matrix_In = Matrix_In;
 			pthread_create(&threads[i], NULL, calculaterow, &params[i]);
 		}
 		

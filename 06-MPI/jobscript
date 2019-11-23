@@ -5,5 +5,5 @@
 #SBATCH --output=%j
 
 
-srun partdiff 12 2 512 2 2 1024
+srun mpirun ./timempi
 

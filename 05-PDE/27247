@@ -6,7 +6,7 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
-Berechnungszeit:    111.069018 s 
+Berechnungszeit:    71.718158 s 
 Speicherbedarf:     257.126236 MiB
 Berechnungsmethode: Jacobi
 Interlines:         512
@@ -33,7 +33,7 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
-Berechnungszeit:    111.082607 s 
+Berechnungszeit:    72.477913 s 
 Speicherbedarf:     257.126236 MiB
 Berechnungsmethode: Jacobi
 Interlines:         512
@@ -60,7 +60,7 @@ Program for calculation of partial differential equations.
     Andreas C. Schmidt, TU München.
 ============================================================
 
-Berechnungszeit:    111.157850 s 
+Berechnungszeit:    72.771124 s 
 Speicherbedarf:     257.126236 MiB
 Berechnungsmethode: Jacobi
 Interlines:         512
