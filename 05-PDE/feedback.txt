@@ -1,7 +1,7 @@
 Die Bearbeitungszeit bitte in ganzen Stunden angeben (aufrunden). 10 (2 für's Programmieren, 8 für's Debugging)
-In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzenrbeitungszeit:  
+In den restlichen Zeilen jeweils ein X in der zutreffenden Spalte setzen.
 
-Bearbeitungszeit:
+Bearbeitungszeit:  
 Schwierigkeit:     [ ] zu leicht         [X] genau richtig     [ ] zu schwer
 Lehrreich:         [ ] wenig             [ ] etwas             [X] sehr
 Verständlichkeit:  [ ] großteils unklar  [ ] teilweise unklar  [X] verständlich
@@ -18,4 +18,3 @@ Was könnten wir verbessern?
 
 Was hat Ihnen besonders gut gefallen?
 OpenMP (nein, nicht pthreads).
-
