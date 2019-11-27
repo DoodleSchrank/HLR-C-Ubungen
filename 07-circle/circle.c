@@ -19,11 +19,12 @@ init (int length, int rest, int numThreads, int rank, int first)
 		{
 			for (j = 0; j < length; j++)
 			{
-				// Do not modify "% 25" - we didn't :)
-				sendbuf[i] = rand() % 25;
 				//wenn Reste vorhanden, soll dieser auf die ersten x Threads verteilt werden, nachfolgende Threads haben im letzten Arrayeintrag 'NULL'
 				if(i >= numThreads - rest && j == length - 1)
-					sendbuf[i] == NULL;
+					j++;
+				else
+					// Do not modify "% 25" - we didn't :)
+					sendbuf[i] = rand() % 25;
 			}
 			//Send data, or save, if you are Zero
 			if(i == 0)
@@ -56,14 +57,14 @@ circle (int* buf, int numThreads, int rank, int length, int first)
 	MPI_Request req;
 	while(done == 0)
 	{
-		savebuf = buf;
+		sendbuf = buf;
 		
 		//create wait for Isend
 		MPI_Wait(&req, MPI_STATUS_IGNORE);
 		//send data asynchronisly, for immediate receive
 		MPI_Isend(&sendbuf, length, MPI_INT, target, 0, MPI_COMM_WORLD, &req);
 		MPI_Recv(&buf, length, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		MPI_Barrier();
+		MPI_Barrier(MPI_COMM_WORLD);
 		//free the asynchronity AFTER!!! the barrier.
 		MPI_Request_free(&req);
 		//if we are done, broadcast so.
@@ -78,7 +79,7 @@ int
 main (int argc, char** argv)
 {
 	MPI_Init(&argc, &argv);
-	int N, rank, numThreads, length, rest, first, i, j;
+	int N, rank, numThreads, length, rest, first, i;
 	int *buf;
 
 	if (argc < 2)
@@ -87,7 +88,7 @@ main (int argc, char** argv)
 		return EXIT_FAILURE;
 	}
 
-	MPI_Comm_rank(MPI_COMM_WORLD, &myid);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numThreads);
 
 	// Array Length
@@ -95,8 +96,8 @@ main (int argc, char** argv)
 	length = N / numThreads + 1;
 	rest = N % numThreads;
 	buf = init(length, rest, numThreads, rank, first);
-
-	printf("\nBEFORE\n");
+	if(rank == 0)
+		printf("\nBEFORE\n");
 
 	for (i = 0; i < length; i++)
 	{
@@ -104,9 +105,10 @@ main (int argc, char** argv)
 			printf("rank %d: %d\n", rank, buf[i]);
 	}
 
-	circle(buf, numThreads, rank, length);
-
-	printf("\nAFTER\n");
+	circle(buf, numThreads, rank, length, first);
+	
+	if(rank == 0)
+		printf("\nAFTER\n");
 
 	for (i = 0; i < length; i++)
 	{
