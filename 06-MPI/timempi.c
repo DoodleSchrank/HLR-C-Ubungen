@@ -55,12 +55,12 @@ int main(int argc, char* argv[])
 	
 	MPI_Barrier(MPI_COMM_WORLD);
 
-	MPI_Finalize();
 	
 	// build string with stringmagic
 	char string[256] = "";
 	if (myid == 0) snprintf(string, sizeof(string), "Meister %d", myid);
 	else snprintf(string, sizeof(string),  "Sklave %d", myid);
 	printf("All those moments will be lost in time, like tears in rain. Time to die. (%s)\n", string);
+	MPI_Finalize();
 	return 0;
 }
