@@ -54,18 +54,17 @@ circle (int* buf, int numThreads, int rank, int length, int first)
 	int target = (rank + 1) % numThreads;
 	int source = (rank - 1) % numThreads;
 	MPI_Request req;
+	
 	while(done == 0)
 	{
 		savebuf = buf;
 		
-		//create wait for Isend
-		MPI_Wait(&req, MPI_STATUS_IGNORE);
 		//send data asynchronisly, for immediate receive
 		MPI_Isend(&sendbuf, length, MPI_INT, target, 0, MPI_COMM_WORLD, &req);
 		MPI_Recv(&buf, length, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-		MPI_Barrier();
-		//free the asynchronity AFTER!!! the barrier.
-		MPI_Request_free(&req);
+		//wait for sent data
+		MPI_Wait(&req, MPI_STATUS_IGNORE);
+		
 		//if we are done, broadcast so.
 		if(rank == numThreads - 1 && buf[0] == first)
 			done = 1;

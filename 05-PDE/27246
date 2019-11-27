@@ -1,8 +1,0 @@
-srun: Job step aborted: Waiting up to 32 seconds for job step to finish.
-srun: got SIGCONT
-slurmstepd-west6: error: *** JOB 27246 ON west6 CANCELLED AT 2019-11-19T16:48:50 ***
-srun: forcing job termination
-slurmstepd-west6: error: *** STEP 27246.0 ON west6 CANCELLED AT 2019-11-19T16:48:50 ***
-srun: error: west8: task 2: Terminated
-srun: error: west7: task 1: Terminated
-srun: error: west6: task 0: Terminated
