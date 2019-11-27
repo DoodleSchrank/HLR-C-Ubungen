@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <mpi.h>
+#include <string.h>
 
 int*
 init (int length, int rest, int numThreads, int rank, int first)
@@ -24,16 +25,23 @@ init (int length, int rest, int numThreads, int rank, int first)
 					j++;
 				else
 					// Do not modify "% 25" - we didn't :)
-					sendbuf[i] = rand() % 25;
+					if(i == 0)
+					{
+						buf[i] = rand() % 25;
+						printf("%d, %d: %d\n", i, j, buf[i]);
+					}
+					else
+						sendbuf[i] = rand() % 25;
 			}
 			//Send data, or save, if you are Zero
-			if(i == 0)
-				buf = sendbuf;
-			else
+			if(i != 0)
 				MPI_Send(&buf, length, MPI_INT, i, 0, MPI_COMM_WORLD);
 		}
 		//Send first int to last Thread
 		MPI_Send(&buf[0], 1, MPI_INT, numThreads - 1, 0, MPI_COMM_WORLD);
+		free(sendbuf);
+		for(int i = 0; i < length; i++)
+			printf("%d: %d\n", i, buf[i]);
 	}
 	else
 	{
@@ -43,7 +51,6 @@ init (int length, int rest, int numThreads, int rank, int first)
 	//Last Thread receives the first int.
 	if(rank == numThreads - 1)
 		MPI_Recv(&first, 1, MPI_INT, 0, 0, MPI_COMM_WORLD , MPI_STATUS_IGNORE);
-
 	return buf;
 }
 
@@ -92,7 +99,7 @@ main (int argc, char** argv)
 
 	// Array Length
 	N = atoi(argv[1]);
-	length = N / numThreads + 1;
+	length = (N + numThreads - 1) / numThreads;
 	rest = N % numThreads;
 	buf = init(length, rest, numThreads, rank, first);
 	if(rank == 0)
