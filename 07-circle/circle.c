@@ -60,10 +60,10 @@ init (void)
 	return buf;
 }
 
-int*
-circle (int* buf)
+int
+*circle (int* buf)
 {
-	int* sendbuf = malloc(sizeof(int) * length);
+	int *recvbuf = malloc(sizeof(int) * length);
 	int done = 0;
 	int target = ((rank + 1) % numThreads);
 	int source = ((rank - 1) % numThreads);
@@ -72,22 +72,21 @@ circle (int* buf)
 
 	while(done == 0)
 	{
-		for(i = 0; i < length; i++)
-			sendbuf[i] = buf[i];
 		//send data asynchronisly, for immediate receive
-		MPI_Isend(&sendbuf, length, MPI_INT, target, 0, MPI_COMM_WORLD, &req);
-		MPI_Recv(&buf, length, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Isend(&buf, length, MPI_INT, target, 0, MPI_COMM_WORLD, &req);
+		MPI_Recv(&recvbuf, length, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 		
-		//wait for sent data
+		//wait for sent data and write recvbuf to buf
 		MPI_Wait(&req, MPI_STATUS_IGNORE);
-		
+		for(i = 0; i < length; i++)
+			buf[i] = recvbuf[i];
+
 		//if we are done, broadcast so.
 		if(rank == numThreads - 1 && buf[0] == first)
 			done = 1;
 		MPI_Bcast(&done, 1, MPI_INT, numThreads - 1, MPI_COMM_WORLD);
 	}
-
-	free(sendbuf);
+	free(recvbuf);
 	return buf;
 }
 
@@ -134,7 +133,7 @@ main (int argc, char** argv)
 			printf("rank %d: %d\n", rank, buf[i]);
 	}
 
-	free(&buf);
+	free(buf);
 	MPI_Finalize();
 	return EXIT_SUCCESS;
 }
