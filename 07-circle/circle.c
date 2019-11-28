@@ -4,8 +4,11 @@
 #include <mpi.h>
 #include <string.h>
 
+//these are some very handsome travellers
+int rank, numThreads, length, rest, first;
+
 int*
-init (int length, int rest, int numThreads, int rank, int first)
+init (void)
 {
 	int* buf = malloc(sizeof(int) * length);
 
@@ -22,54 +25,59 @@ init (int length, int rest, int numThreads, int rank, int first)
 			{
 				//wenn Reste vorhanden, soll dieser auf die ersten x Threads verteilt werden, nachfolgende Threads haben im letzten Arrayeintrag 'NULL'
 				if(i >= numThreads - rest && j == length - 1)
-					j++;
+					sendbuf[j] = -1;
 				else
+				{
 					// Do not modify "% 25" - we didn't :)
-					if(i == 0)
-					{
-						buf[i] = rand() % 25;
-						printf("%d, %d: %d\n", i, j, buf[i]);
-					}
-					else
-						sendbuf[i] = rand() % 25;
+					sendbuf[j] = rand() % 25;
+				}
 			}
+
 			//Send data, or save, if you are Zero
 			if(i != 0)
-				MPI_Send(&buf, length, MPI_INT, i, 0, MPI_COMM_WORLD);
+				MPI_Send(&sendbuf, length, MPI_INT, i, 0, MPI_COMM_WORLD);
+			else
+			{
+				for(j = 0; j < length; j++)
+					buf[j] = sendbuf[j];
+			}
 		}
+
 		//Send first int to last Thread
 		MPI_Send(&buf[0], 1, MPI_INT, numThreads - 1, 0, MPI_COMM_WORLD);
 		free(sendbuf);
-		for(int i = 0; i < length; i++)
-			printf("%d: %d\n", i, buf[i]);
 	}
 	else
 	{
 		//Receive your part of the pie :)
 		MPI_Recv(&buf, length, MPI_INT, 0, 0, MPI_COMM_WORLD , MPI_STATUS_IGNORE);
 	}
+
 	//Last Thread receives the first int.
 	if(rank == numThreads - 1)
 		MPI_Recv(&first, 1, MPI_INT, 0, 0, MPI_COMM_WORLD , MPI_STATUS_IGNORE);
+	
 	return buf;
 }
 
 int*
-circle (int* buf, int numThreads, int rank, int length, int first)
+circle (int* buf)
 {
 	int* sendbuf = malloc(sizeof(int) * length);
 	int done = 0;
-	int target = (rank + 1) % numThreads;
-	int source = (rank - 1) % numThreads;
+	int target = ((rank + 1) % numThreads);
+	int source = ((rank - 1) % numThreads);
 	MPI_Request req;
-	
+	int i;
+
 	while(done == 0)
 	{
-		sendbuf = buf;
-		
+		for(i = 0; i < length; i++)
+			sendbuf[i] = buf[i];
 		//send data asynchronisly, for immediate receive
 		MPI_Isend(&sendbuf, length, MPI_INT, target, 0, MPI_COMM_WORLD, &req);
 		MPI_Recv(&buf, length, MPI_INT, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		
 		//wait for sent data
 		MPI_Wait(&req, MPI_STATUS_IGNORE);
 		
@@ -78,6 +86,8 @@ circle (int* buf, int numThreads, int rank, int length, int first)
 			done = 1;
 		MPI_Bcast(&done, 1, MPI_INT, numThreads - 1, MPI_COMM_WORLD);
 	}
+
+	free(sendbuf);
 	return buf;
 }
 
@@ -85,7 +95,7 @@ int
 main (int argc, char** argv)
 {
 	MPI_Init(&argc, &argv);
-	int N, rank, numThreads, length, rest, first, i;
+	int N, i;
 	int *buf;
 
 	if (argc < 2)
@@ -101,27 +111,30 @@ main (int argc, char** argv)
 	N = atoi(argv[1]);
 	length = (N + numThreads - 1) / numThreads;
 	rest = N % numThreads;
-	buf = init(length, rest, numThreads, rank, first);
+	// init part of array
+	buf = init();
+	
+	//some printy boys
 	if(rank == 0)
 		printf("\nBEFORE\n");
-
 	for (i = 0; i < length; i++)
 	{
-		if(buf[i])
+		if(buf[i] > -1)
 			printf("rank %d: %d\n", rank, buf[i]);
 	}
 
-	circle(buf, numThreads, rank, length, first);
+	buf = circle(buf);
 	
+	//more printy boys :o
 	if(rank == 0)
 		printf("\nAFTER\n");
-
 	for (i = 0; i < length; i++)
 	{
-		if(buf[i])
+		if(buf[i] > -1)
 			printf("rank %d: %d\n", rank, buf[i]);
 	}
 
+	free(&buf);
 	MPI_Finalize();
 	return EXIT_SUCCESS;
 }
