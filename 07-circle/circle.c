@@ -24,7 +24,7 @@ init (void)
 			for (j = 0; j < length; j++)
 			{
 				//wenn Reste vorhanden, soll dieser auf die ersten x Threads verteilt werden, nachfolgende Threads haben im letzten Arrayeintrag 'NULL'
-				if(i >= numThreads - (numThreads - rest)  && j == length - 1)
+				if(i >= rest && j == length - 1 && rest != 0)
 					sendbuf[j] = -1;
 				else
 				{
@@ -66,7 +66,7 @@ circle (int* buf)
 	int sendbuf[length];
 	int done = 0;
 	int target = ((rank + 1) % numThreads);
-	int source = (((rank - 1) % numThreads) + numThreads) % numThreads;
+	int source =(numThreads + rank - 1) % numThreads;
 	MPI_Request req;
 	int i;
 
