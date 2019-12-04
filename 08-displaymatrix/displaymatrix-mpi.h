@@ -10,9 +10,9 @@
  */
 static
 void
-DisplayMatrix (struct calculation_arguments* arguments, struct calculation_results* results, struct options* options, int rank, int size, int from, int to)
+DisplayMatrix (struct calculation_arguments* arguments, struct calculation_results* results, double *thread_options, int rank, int size, int from, int to)
 {
-  int const elements = 8 * options->interlines + 9;
+  int const elements = 8 * thread_options[0] + 9;
 
   int x, y;
   double** Matrix = arguments->Matrix[results->m];
@@ -57,7 +57,7 @@ DisplayMatrix (struct calculation_arguments* arguments, struct calculation_resul
     {
       for (x = 0; x < 9; x++)
       {
-        int col = x * (options->interlines + 1);
+        int col = x * (thread_options[0] + 1);
 
         if (line >= from && line <= to)
         {

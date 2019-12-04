@@ -179,6 +179,8 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 
 void calculate (double *thread_options)
 {
+	int target = rank + 1;
+	int source = rank - 1;
 	int i, j, *done = 0;
 
 	int const N = arguments->N;
@@ -193,6 +195,7 @@ void calculate (double *thread_options)
 	double **Matrix_Out = arguments->Matrix[0];
 	double **Matrix_In = arguments->Matrix[1];
 	double *maxresiduum, star = 0.0, residuum = 0.0;
+	MPI_Request reqUpper, reqLower;
 	
 	if(rank == 0 && thread_options[2] == TERM_PREC)
 		double *maxres = malloc(sizeof(double));
@@ -241,9 +244,23 @@ void calculate (double *thread_options)
 			if(iteration == thread_options[3])
 				done = 1;
 		}
-		//TODO: Daten senden
+		// First and last Thread don't send/recv first or last row
+		if(rank != 0)
+			MPI_Isend(&Matrix_Out[0], L, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqUpper);
+		if(rank != numThreads - 1)
+			MPI_Isend(&Matrix_Out[L-1], L, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqLower);
+		if(rank != 0)
+		{
+			MPI_Recv(&Matrix_Out[0], L, MPI_DOUBLE, source, 0, MPI_COMM_WORLD);
+			MPI_Wait(&reqUpper);
+		}
+		if(rank != numThreads - 1)
+		{
+			MPI_Recv(&Matrix_Out[L-1], L, MPI_DOUBLE, source, 0, MPI_COMM_WORLD);
+			MPI_Wait(&reqLower);
+		}
+		
 	}
-	//TODO: OUTPUT
 }
 
 int main (int argc, char *argv)
@@ -278,8 +295,10 @@ int main (int argc, char *argv)
 	calculate(&arguments, &results, &thread_options);
 	gettimeofday(&comp_time, NULL);
 
+	MPI_Barrier(MPI_COMM_WORLD);
+	
 	displayStatistics(&arguments, &results, &thread_options);
-	displayMatrix(&arguments, &results, &thread_options);
+	DisplayMatrix (arguments, results, thread_options, rank, (int) arguments->L, 1, (int) arguments->L-1);
 
 	freeMatrices(&arguments);
 	
