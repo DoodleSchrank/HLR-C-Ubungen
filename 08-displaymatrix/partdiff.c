@@ -7,6 +7,7 @@
 #include <sys/time.h>
 #include <mpi.h>
 #include "displaymatrix-mpi.h"
+#include "partdiff.h"
 
 struct calculation_arguments
 {
@@ -157,7 +158,7 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 	printf("Speicherbedarf:     %f MiB\n", (N + 1) * (L + 1) * sizeof(double) * 2 / 1024.0 / 1024.0);
 	printf("Berechnungsmethode: Jacobi\n");
 
-	printf("Interlines:         %" PRIu64 "\n",options->interlines);
+	printf("Interlines:         %" PRIu64 "\n", (int) thread_options[0]);
 	printf("Stoerfunktion:      ");
 
 	if (thread_options[1] == FUNC_F0)
@@ -177,11 +178,12 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 	printf("\n");
 }
 
-void calculate (double *thread_options)
+void calculate (struct calculation_arguments *arguments, struct calculation_results *results, double *thread_options)
 {
 	int target = rank + 1;
 	int source = rank - 1;
 	int i, j, *done = 0;
+	int m1 = 0, m2 = 1;
 
 	int const N = arguments->N;
 	int const L = arguments->L;
@@ -192,8 +194,8 @@ void calculate (double *thread_options)
 
 	int term_iteration = thread_options[3];
 
-	double **Matrix_Out = arguments->Matrix[0];
-	double **Matrix_In = arguments->Matrix[1];
+	double **Matrix_Out = arguments->Matrix[m1];
+	double **Matrix_In = arguments->Matrix[m2];
 	double *maxresiduum, star = 0.0, residuum = 0.0;
 	MPI_Request reqUpper, reqLower;
 	
@@ -259,30 +261,40 @@ void calculate (double *thread_options)
 			MPI_Recv(&Matrix_Out[L-1], L, MPI_DOUBLE, source, 0, MPI_COMM_WORLD);
 			MPI_Wait(&reqLower);
 		}
-		
+		results->stat_iteration++;
+		results->stat_precision = maxresiduum;
+				
+		/* exchange m1 and m2 */
+		i = m1;
+		m1 = m2;
+		m2 = i;
+		Matrix_Out = arguments->Matrix[m1];
+		Matrix_In = arguments->Matrix[m2];
 	}
+	results->m = m2;
 }
 
 int main (int argc, char *argv)
 {
 	MPI_Init(&argc, &argv);
 	
-	double thread_options = malloc(5 * sizeof(double));
+	double thread_options[numThreads];
 	struct options options;
 	struct calculation_arguments arguments;
 	struct calculation_results results;
 	
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, &numThreads);
-	
+
+	//make most options double, for better MPI-Sending :)
 	if(rank == 0)
 	{
 		askParams(&options, argc, argv);
-		thread_options = {(double) options->interlines,
-		                  (double) options->inf_func,
-		                  (double) options->termination,
-		                  (double) options->term_iteration,
-		                  (double) options->term_precision}
+		thread_options[0] = (double) options.interlines;
+		thread_options[1] = (double) options.inf_func;
+		thread_options[2] = (double) options.termination;
+		thread_options[3] = (double) options.term_iteration;
+		thread_options[4] = (double) options.term_precision;
 	}
 	MPI_Bcast(&thread_options, 5, MPI_DOUBLE, 0, MPI_COMM_WORLD);
 	
@@ -298,7 +310,7 @@ int main (int argc, char *argv)
 	MPI_Barrier(MPI_COMM_WORLD);
 	
 	displayStatistics(&arguments, &results, &thread_options);
-	DisplayMatrix (arguments, results, thread_options, rank, (int) arguments->L, 1, (int) arguments->L-1);
+	DisplayMatrix (&arguments, &results, &thread_options, rank, (int) arguments->L, 1, (int) arguments->L-1);
 
 	freeMatrices(&arguments);
 	
