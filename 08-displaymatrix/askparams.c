@@ -157,9 +157,11 @@ check_term_iteration (struct options* options)
 }
 
 void
-askParams (struct options* options, int argc, char** argv)
+askParams (struct options* options, int argc, char** argv, int rank)
 {
 	int ret;
+	if(rank == 0)
+	{
 
 	printf("============================================================\n");
 	printf("Program for calculation of partial differential equations.  \n");
@@ -169,6 +171,7 @@ askParams (struct options* options, int argc, char** argv)
 	printf("    Andreas C. Schmidt, TU München.\n");
 	printf("============================================================\n");
 	printf("\n");
+	}
 
 	if (argc < 2)
 	{
