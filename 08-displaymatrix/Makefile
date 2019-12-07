@@ -1,5 +1,5 @@
 # Common definitions
-CC = gcc
+CC = mpicc
 
 # Compiler flags, paths and libraries
 CFLAGS = -std=c11 -pedantic -Wall -Wextra -O3 -ggdb -pthread
