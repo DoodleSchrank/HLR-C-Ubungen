@@ -32,7 +32,7 @@ struct timeval comp_time;        /* time when calculation completed             
 int rank, numThreads;
 
 //Größe und Anfang & Ende der Teilmatrizen der einzelnen Prozesse
-int matrix_size, matrix_from, matrix_to;
+uint64_t matrix_size, matrix_from, matrix_to;
 
 static
 void
@@ -49,8 +49,8 @@ initVariables (struct calculation_arguments* arguments, struct calculation_resul
     // das habe ich von nem kollegen geklaut, der das schon mal gemacht hat, kann sein dass teil der musterlösung ist, deshalb oben auch die min fuinktion
     uint64_t N = arguments->N;
     matrix_size =  ceil((float)(N-1) / numThreads);
-    matrix_from = ((matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
-    matrix_to = ((matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
+    matrix_from = ((uint64_t) (matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
+    matrix_to = ((uint64_t) (matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
     if (matrix_from > matrix_to)
     {
         matrix_from = N;
@@ -205,10 +205,10 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 {
     int target = rank + 1;
     int source = rank - 1;
-    int i, j = 0;
+    uint64_t i, j = 0;
     int m1 = 0, m2 = 1;
 
-    int const N = arguments->N;
+    uint64_t const N = arguments->N;
     double const h = arguments->h;
 
     double pih = 0.0;
