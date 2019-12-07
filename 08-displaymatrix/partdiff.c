@@ -48,9 +48,9 @@ initVariables (struct calculation_arguments* arguments, struct calculation_resul
 
     // das habe ich von nem kollegen geklaut, der das schon mal gemacht hat, kann sein dass teil der musterlösung ist, deshalb oben auch die min fuinktion
     uint64_t N = arguments->N;
-    matrix_size = ceil((float)(N-1) / numThreads);
+    matrix_size =  ceil((float)(N-1) / numThreads);
     matrix_from = ((matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
-    matrix_to = ((matrix_size * (rank + 1)) < N - 1) ? matrix_size * (rank + 1) : N - 1;
+    matrix_to = ((matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
     if (matrix_from > matrix_to)
     {
         matrix_from = N;
@@ -181,7 +181,7 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
     printf("Speicherbedarf:     %f MiB\n", (N + 1) * (N + 1) * sizeof(double) * arguments->num_matrices / 1024.0 / 1024.0);
     printf("Berechnungsmethode: Jacobi\n");
 
-    printf("Interlines:         %" PRIu64 "\n", (int) options->interlines);
+    printf("Interlines:         %" PRIu64 "\n", options->interlines);
     printf("Stoerfunktion:      ");
 
     if (options->inf_func == FUNC_F0)
@@ -269,16 +269,18 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
         m1 = m2;
         m2 = i;
 
+	// Der erste Rang kriegt natürlich nix vom Vordermann
         if (source >= 0)
         {
-            MPI_Isend(Matrix_In[1], N + 1, MPI_DOUBLE, source, term_iteration * numThreads + rank, MPI_COMM_WORLD, &reqLower);
-            MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, term_iteration * numThreads + source, MPI_COMM_WORLD, &status);
+            MPI_Isend(Matrix_In[1], N + 1, MPI_DOUBLE, source,  0, MPI_COMM_WORLD, &reqLower);
+            MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source,  0, MPI_COMM_WORLD, &status);
         }
 
+	//Der letzte auch nicht vom Nachfolger
         if (target < numThreads)
         {
-            MPI_Isend(Matrix_In[matrix_size], N + 1, MPI_DOUBLE, target, term_iteration * numThreads + rank, MPI_COMM_WORLD, &reqUpper);
-            MPI_Recv(Matrix_In[matrix_size], N + 1, MPI_DOUBLE, target, term_iteration * numThreads + target, MPI_COMM_WORLD, &status);
+            MPI_Isend(Matrix_In[matrix_size], N + 1, MPI_DOUBLE, target,  0, MPI_COMM_WORLD, &reqUpper);
+            MPI_Recv(Matrix_In[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &status);
         }
 
         if (options->termination == TERM_PREC)
@@ -389,6 +391,7 @@ int main (int argc, char** argv)
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &numThreads);
 
+    //Rang 0 macht den ganzen Kram
     askParams(&options, argc, argv, rank);
 
     initVariables(&arguments, &results, &options);
@@ -401,12 +404,13 @@ int main (int argc, char** argv)
     gettimeofday(&comp_time, NULL);
 
     MPI_Barrier(MPI_COMM_WORLD);
-
+    
+    // Nur Rang 0 gibt die Statistiken aus
     if (rank == 0)
     {
         displayStatistics(&arguments, &results, &options);
     }
-
+    //Für die Matrix muss allerdings jeder was abliefern
     DisplayMatrix (&arguments, &results, &options, rank, numThreads, matrix_from, matrix_to);
 
     freeMatrices(&arguments);
