@@ -46,7 +46,6 @@ initVariables (struct calculation_arguments* arguments, struct calculation_resul
     results->stat_iteration = 0;
     results->stat_precision = 0;
 
-    // das habe ich von nem kollegen geklaut, der das schon mal gemacht hat, kann sein dass teil der musterlösung ist, deshalb oben auch die min fuinktion
     uint64_t N = arguments->N;
     matrix_size =  ceil((float)(N-1) / numThreads);
     matrix_from = ((uint64_t) (matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
@@ -81,8 +80,6 @@ allocateMatrices (struct calculation_arguments* arguments)
 {
     uint64_t i, j;
 
-    //TODO: Sichergehen, dass ich hier alles richtig gemacht habe
-    // +1 bzw. +2 da es dann unten leserlicher ist.
     uint64_t const N = arguments->N;
     uint64_t const size = matrix_size + 2;
 
@@ -119,7 +116,8 @@ static
 void
 initMatrices (struct calculation_arguments* arguments, struct options const* options)
 {
-    uint64_t g, i, j;                                /*  local variables for loops   */
+    // it fit many lööp, brøther
+    uint64_t g, i, j;
 
     uint64_t const N = arguments->N;
     uint64_t const size = matrix_size + 2;
@@ -127,7 +125,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
     double const h = arguments->h;
     double*** Matrix = arguments->Matrix;
 
-    /* initialize matrix/matrices with zeros */
+    // initialize matrix/matrices with zeros
     for (g = 0; g < arguments->num_matrices; g++)
     {
         for (i = 0; i < size; i++)
@@ -139,7 +137,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
         }
     }
 
-    /* initialize borders, depending on function (function 2: nothing to do) */
+    // initialize borders, depending on function (function 2: nothing to do)
     if (options->inf_func == FUNC_F0)
     {
         for (g = 0; g < arguments->num_matrices; g++)
@@ -152,13 +150,13 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 
             if (matrix_from == 1)
             {
-                for (j = 0; j <= N; j++) // kp ob das für j = N stimmt, sonst muss man die schleife einen früher beenden und Matrix[g][0][N] händisch auf 0 setzen
+                for (j = 0; j <= N; j++)
                 {
                     Matrix[g][0][j] = 1.0 - (h * j);
                 }
             }
 
-            if ((uint64_t)matrix_to >= (N - 1)) //yikes
+            if (matrix_to >= (N - 1))
             {
                 for (j = 0; j < N; j++)
                 {
@@ -220,6 +218,11 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
     MPI_Status status;
     MPI_Request reqUpper, reqLower;
 
+    double** Matrix_Out;
+    double** Matrix_In;
+
+    double fpisin_i = 0.0;
+
     if (options->inf_func == FUNC_FPISIN)
     {
         pih = PI * h;
@@ -228,26 +231,25 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 
     while(term_iteration > 0)
     {
-        double** Matrix_Out = arguments->Matrix[m1];
-        double** Matrix_In  = arguments->Matrix[m2];
+        Matrix_Out = arguments->Matrix[m1];
+        Matrix_In  = arguments->Matrix[m2];
 
         maxresiduum = 0;
 
         for (i = 1; i < matrix_size + 1; i++)
         {
-            double fpisin_i = 0.0;
-
             if (options->inf_func == FUNC_FPISIN)
             {
-                fpisin_i = fpisin * sin(pih * (double)(i + matrix_from - 1));
+                fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
             }
-            //* over all columns */
+
+            // over all columns
             for (j = 1; j < N; j++)
             {
                 star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
                 if (options->inf_func == FUNC_FPISIN)
                 {
-                    star += fpisin_i * sin(pih * (double)j);
+                    star += fpisin_i * sin(pih * j);
                 }
                 if (options->termination == TERM_PREC || term_iteration == 1)
                 {
@@ -259,28 +261,29 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
             }
         }
 
+        // calculate maxresiduum
         MPI_Allreduce(&maxresiduum, &maxres, 1, MPI_DOUBLE, MPI_MAX, MPI_COMM_WORLD);
 
         results->stat_iteration++;
         results->stat_precision = maxres;
 
-        /* exchange m1 and m2 */
+        // exchange m1 and m2
         i = m1;
         m1 = m2;
         m2 = i;
 
-	// Der erste Rang kriegt natürlich nix vom Vordermann
+	    // ignore rank 0 because it has no previous partner (it's still single and lookin' for a soulmate)
         if (source >= 0)
         {
-            MPI_Isend(Matrix_In[1], N + 1, MPI_DOUBLE, source,  0, MPI_COMM_WORLD, &reqLower);
-            MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source,  0, MPI_COMM_WORLD, &status);
+            MPI_Isend(Matrix_In[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqLower);
+            MPI_Recv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &status);
         }
 
-	//Der letzte auch nicht vom Nachfolger
+	    // similarly ignore last rank because it has zero followers (on instagram) /BIG SAD/
         if (target < numThreads)
         {
-            MPI_Isend(Matrix_In[matrix_size], N + 1, MPI_DOUBLE, target,  0, MPI_COMM_WORLD, &reqUpper);
-            MPI_Recv(Matrix_In[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &status);
+            MPI_Isend(Matrix_In[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqUpper);
+            MPI_Recv(Matrix_In[matrix_size],  N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &status);
         }
 
         if (options->termination == TERM_PREC)
@@ -299,7 +302,6 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
     results->m = m2;
 }
 
-// copy paste
 /**
  * rank and size are the MPI rank and size, respectively.
  * from and to denote the global(!) range of lines that this process is responsible for.
