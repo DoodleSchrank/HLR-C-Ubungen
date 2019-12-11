@@ -198,7 +198,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 
 	int term_iteration = options->term_iteration;
 
-	double maxresiduum, star, residuum, *maxres;
+	double maxresiduum, star, residuum, maxres;
 	MPI_Status status;
 	MPI_Request reqUpper, reqRes;
 
@@ -281,9 +281,10 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 			if(rank == 0)
 			{
 				maxresidaa[0] = maxresiduum;
+				maxres = 0;
 				for(i = 0; i < numThreads; i++)
 				{
-					*maxres = (maxresidaa[i] > *maxres) ? maxresidaa[i] : *maxres;
+					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
 				}
 				if(maxresidaa[i] > options->term_precision)
 				{
@@ -293,7 +294,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 					}
 				}
 			}
-			if (*maxres < options->term_precision)
+			if (maxres < options->term_precision)
 			{
 				term_iteration = 0;
 			}
@@ -382,7 +383,7 @@ DisplayMatrix (struct calculation_arguments* arguments, struct calculation_resul
 		}
 	}
 
-	fflush(stdout);
+	//fflush(stdout);
 }
 
 int main (int argc, char** argv)
