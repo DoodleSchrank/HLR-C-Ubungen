@@ -186,8 +186,8 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 
 void calculate (struct calculation_arguments *arguments, struct calculation_results *results,  struct options const* options)
 {
-    int target = rank + 1 % numThreads;
-    int source = (rank - 1 + numThreads) % numThreads;
+    int target = 0;//rank + 1;
+    int source = 0;//rank - 1;
     uint64_t i, j = 0;
 
     uint64_t const N = arguments->N;
@@ -199,7 +199,6 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
     int term_iteration = options->term_iteration;
 
     double maxresiduum, star, residuum, *maxres;
-		*maxres = 0.0;
     MPI_Status status;
     MPI_Request reqUpper, reqRes;
 
@@ -209,17 +208,18 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
     double fpisin_i = 0.0;
 	
 	//rank 0 prepares for receiving maxresidaa of other processes
-	if(rank == 0)
+	if(rank == 0 && numThreads > 1)
 	{
 		for(i = 1; i < numThreads; i++)
 			MPI_Irecv(&maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 	}
 	//the others prepare for receiving maxres (the one that cancels this whole operation)
-	else if (options->termination == TERM_PREC)
-    {
+	else
+		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqUpper);
+	if (options->termination == TERM_PREC && rank != 0)
+    
 		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
-		MPI_Irecv(&Matrix[0], N+1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &reqUpper);
-	}
+	
 
     if (options->inf_func == FUNC_FPISIN)
     {
@@ -232,7 +232,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
         maxresiduum = 0;
 		
 		//Only wait after first iteration, else we're stuck
-		if(results->stat_iteration > 0)
+		if(results->stat_iteration > 0 && rank < numThreads)
 			MPI_Wait(&reqUpper, MPI_STATUS_IGNORE);
 	    // ignore rank 0 because it has no previous partner (it's still single and lookin' for a soulmate)
         if (source >= 0)
@@ -270,7 +270,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
         results->stat_precision = maxresiduum;
 
 	    // ignore last rank because it has zero followers (on instagram) /BIG SAD/
-        if (target < numThreads)
+        if (target < numThreads - 1)
         {
             MPI_Isend(Matrix[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqUpper);
         }
