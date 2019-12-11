@@ -13,7 +13,7 @@ struct calculation_arguments
     uint64_t  N;              /* number of spaces between lines (lines=N+1)     */
     uint64_t  num_matrices;   /* number of matrices                             */
     double    h;              /* length of a space between two lines            */
-    double    ***Matrix;      /* index matrix used for addressing M             */
+    double    **Matrix;      /* index matrix used for addressing M             */
     double    *M;             /* two matrices with real values                  */
 };
 
@@ -48,15 +48,15 @@ initVariables (struct calculation_arguments* arguments, struct calculation_resul
 	
 	//safety if interlines > numThreads / 4 
 	//division by 4 to guarantee at least some benefit from paralellization
-	numThreads = (numThreads > (N-1) / 4) ? numThreads : floor((N-1) / 4);
-    matrix_size =  ceil((float)(N-1) / numThreads);
-    matrix_from = ((uint64_t) (matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
-    matrix_to = ((uint64_t) (matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
-    if (matrix_from > matrix_to)
-    {
-        matrix_from = N;
-        matrix_to = N - 1;
-    }
+	numThreads = (numThreads > (N - 1.0) / 4.0) ? numThreads : floor((N-1) / 4);
+  matrix_size =  ceil((float)(N-1) / numThreads);
+	matrix_from = ((uint64_t) (matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
+	matrix_to = ((uint64_t) (matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
+  if (matrix_from > matrix_to)
+  {
+      matrix_from = N;
+      matrix_to = N - 1;
+  }
 }
 
 static
@@ -80,19 +80,18 @@ static
 void
 allocateMatrices (struct calculation_arguments* arguments)
 {
-    uint64_t i, j;
+    uint64_t i;
 
     uint64_t const N = arguments->N;
     uint64_t const size = matrix_size + 2;
 
     arguments->M = allocateMemory((N + 1) * size * sizeof(double));
-    arguments->Matrix = allocateMemory(sizeof(double**));
 
-    arguments->Matrix[i] = allocateMemory((N + 1) * sizeof(double*));
+    arguments->Matrix = allocateMemory((N + 1) * sizeof(double*));
 
-    for (j = 0; j <= N; j++)
+    for (i = 0; i <= N; i++)
     {
-        arguments->Matrix[i][j] = arguments->M + (i * (N + 1) * size) + (j * (N + 1));
+        arguments->Matrix[i] = arguments->M + (i * (N + 1) * size) + (i * (N + 1));
     }
 }
 
@@ -100,10 +99,6 @@ static
 void
 freeMatrices (struct calculation_arguments* arguments)
 {
-    uint64_t i;
-
-    free(arguments->Matrix[i]);
-
     free(arguments->Matrix);
     free(arguments->M);
 }
@@ -113,20 +108,20 @@ void
 initMatrices (struct calculation_arguments* arguments, struct options const* options)
 {
     // it fit many lööp, brøther
-    uint64_t g, i, j;
+    uint64_t i, j;
 
     uint64_t const N = arguments->N;
     uint64_t const size = matrix_size + 2;
 
     double const h = arguments->h;
-    double*** Matrix = arguments->Matrix;
+    double** Matrix = arguments->Matrix;
 
     // initialize matrix/matrices with zeros
     for (i = 0; i < size; i++)
     {
         for (j = 0; j < N; j++)
         {
-            Matrix[g][i][j] = 0.0;
+            Matrix[i][j] = 0.0;
         }
     }
 	
@@ -135,15 +130,15 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
     {
 		for (i = 0; i < size; i++)
 		{
-			Matrix[g][i][0] = 1.0 - (h * (i + matrix_from - 1));
-			Matrix[g][i][N] = h * (i + matrix_from - 1);
+			Matrix[i][0] = 1.0 - (h * (i + matrix_from - 1));
+			Matrix[i][N] = h * (i + matrix_from - 1);
 		}
 	
 		if (matrix_from == 1)
 		{
 			for (j = 0; j <= N; j++)
 			{
-				Matrix[g][0][j] = 1.0 - (h * j);
+				Matrix[0][j] = 1.0 - (h * j);
 			}
 		}
 	
@@ -151,7 +146,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
 		{
 			for (j = 0; j < N; j++)
 			{
-				Matrix[g][matrix_size + 1][j] = h * j;
+				Matrix[matrix_size + 1][j] = h * j;
 			}
 		}
     }
@@ -203,12 +198,12 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 
     int term_iteration = options->term_iteration;
 
-    double maxresiduum, star, residuum, maxres = 0.0;
+    double maxresiduum, star, residuum, *maxres;
+		*maxres = 0.0;
     MPI_Status status;
-    MPI_Request reqUpper, reqLower, reqRes;
+    MPI_Request reqUpper, reqRes;
 
     double** Matrix = arguments->Matrix;
-    double** Matrix;
 	double maxresidaa[numThreads];
 
     double fpisin_i = 0.0;
@@ -217,12 +212,12 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	if(rank == 0)
 	{
 		for(i = 1; i < numThreads; i++)
-			MPI_Irecv(maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, reqRes);
+			MPI_Irecv(&maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 	}
 	//the others prepare for receiving maxres (the one that cancels this whole operation)
 	else if (options->termination == TERM_PREC)
     {
-		MPI_Irecv(*maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, reqRes);
+		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 	}
 
     if (options->inf_func == FUNC_FPISIN)
@@ -237,7 +232,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		
 		//Only wait after first iteration, else we're stuck
 		if(results->stat_iteration > 0)
-			MPI_Wait(&reqUpper);
+			MPI_Wait(&reqUpper, MPI_STATUS_IGNORE);
 	    // ignore rank 0 because it has no previous partner (it's still single and lookin' for a soulmate)
         if (source >= 0)
         {
@@ -287,17 +282,17 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 				maxresidaa[0] = maxresiduum;
 				for(i = 0; i < numThreads; i++)
 				{
-					maxres = (maxresidaa[i] > maxres) maxresidaa[i] : maxres;
+					*maxres = (maxresidaa[i] > *maxres) ? maxresidaa[i] : *maxres;
 				}
 				if(maxresidaa[i] > options->term_precision)
 				{
 					for(i = 1; i < numThreads; i++)
 					{
-						MPI_Isend(maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
+						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 					}
 				}
 			}
-            if (maxres < options->term_precision)
+            if (*maxres < options->term_precision)
             {
                 term_iteration = 0;
             }
