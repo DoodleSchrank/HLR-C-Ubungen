@@ -186,8 +186,8 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 
 void calculate (struct calculation_arguments *arguments, struct calculation_results *results,  struct options const* options)
 {
-    int target = rank + 1;
-    int source = rank - 1;
+    int target = rank + 1 % numThreads;
+    int source = (rank - 1 + numThreads) % numThreads;
     uint64_t i, j = 0;
 
     uint64_t const N = arguments->N;
@@ -218,6 +218,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	else if (options->termination == TERM_PREC)
     {
 		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
+		MPI_Irecv(&Matrix[0], N+1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD, &reqUpper);
 	}
 
     if (options->inf_func == FUNC_FPISIN)
