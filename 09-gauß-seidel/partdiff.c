@@ -20,7 +20,7 @@ struct calculation_arguments
 
 struct calculation_results
 {
-    uint64_t  m;
+	uint64_t  m;
 	uint64_t  stat_iteration; /* number of current iteration					*/
 	double	stat_precision; /* actual precision of all slaves in iteration	*/
 };
@@ -306,8 +306,9 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		}
 		// Send last row
 		// ignore last rank because it has no followers /BIG SAD/
-		if (target < numThreads - 1)
+		if (target != numThreads)
 		{
+			printf("%d; %d", rank, target);
 			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSend);
 		}
 		
@@ -329,6 +330,10 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 					}
 				}
+			}
+			else
+			{
+				MPI_Isend(&maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 			}
 			if (maxres < options->term_precision)
 			{
