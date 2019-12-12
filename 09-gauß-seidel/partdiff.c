@@ -13,7 +13,7 @@ struct calculation_arguments
 	uint64_t  N;			  /* number of spaces between lines (lines=N+1)	 */
 	uint64_t  num_matrices;   /* number of matrices							 */
 	double	h;			  /* length of a space between two lines			*/
-	double	**Matrix;	  /* index matrix used for addressing M			 */
+	double	***Matrix;	  /* index matrix used for addressing M			 */
 	double	*M;			 /* two matrices with real values				  */
 };
 
@@ -203,8 +203,8 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 
 void calculate (struct calculation_arguments *arguments, struct calculation_results *results,  struct options const* options)
 {
-	int target = 0;//rank + 1;
-	int source = 0;//rank - 1;
+	int target = rank + 1;
+	int source = rank - 1;
 	uint64_t i, j = 0;
 
 	uint64_t const N = arguments->N;
@@ -219,12 +219,11 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	// it's over 9000!
 	double maxres = 9000.1;
 	
-	MPI_Status status;
 	MPI_Request reqSend, reqRecv, reqRes;
 
 	// there is only one, Neo.
-    double** Matrix_Out = arguments->Matrix[0];
-    double** Matrix_In = arguments->Matrix[0];
+	double** Matrix_Out = arguments->Matrix[0];
+	double** Matrix_In = arguments->Matrix[0];
 	
 	double maxresidaa[numThreads];
 
@@ -253,44 +252,44 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	// Recieve first row, needs to be done before lööp
 	if (source != -1)
 	{
-		MPI_Irecv(Matrix[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &status, &reqRecv);
+		MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecv);
 	}
 	
 	while(term_iteration > 0)
 	{
 		maxresiduum = 0;
 		
-        for (i = 1; i < matrix_size + 1; i++)
-        {
-            if (options->inf_func == FUNC_FPISIN)
-            {
-                fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
-            }
-			
+    for (i = 1; i < matrix_size + 1; i++)
+    {
+    	if (options->inf_func == FUNC_FPISIN)
+      {
+				fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
+			}
+
 			// Wait for first row
-			if(rank > 0 && i = 0)
+			if(rank > 0 && i == 0)
 				MPI_Wait(&reqRecv, MPI_STATUS_IGNORE);		
 			
 			// Wait for last row
-			if(results->stat_iteration > 0 && rank < numThreads - 1 && i = matrix_size)
+			if(results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size)
 				MPI_Wait(&reqSend, MPI_STATUS_IGNORE);
 			
-            for (j = 1; j < N; j++)
-            {
-                star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
-                if (options->inf_func == FUNC_FPISIN)
-                {
-                    star += fpisin_i * sin(pih * j);
-                }
-                if (options->termination == TERM_PREC || term_iteration == 1)
-                {
-                    residuum = Matrix_In[i][j] - star;
-                    residuum = (residuum < 0) ? -residuum : residuum;
-                    maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
-                }
-                Matrix_Out[i][j] = star;
-            }
+			for (j = 1; j < N; j++)
+			{
+  	  	star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+  	    if (options->inf_func == FUNC_FPISIN)
+				{
+					star += fpisin_i * sin(pih * j);
+				}
+				if (options->termination == TERM_PREC || term_iteration == 1)
+				{
+					residuum = Matrix_In[i][j] - star;
+     	  	residuum = (residuum < 0) ? -residuum : residuum;
+         	maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
         }
+        Matrix_Out[i][j] = star;
+      }
+		}
 
 
 		results->stat_iteration++;
@@ -299,13 +298,13 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		// Recieve first row
 		if (source != -1)
 		{
-			MPI_Irecv(Matrix[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &status, &reqRecv);
+			MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecv);
 		}
 		// Send last row
 		// ignore last rank because it has no followers /BIG SAD/
 		if (target < numThreads - 1)
 		{
-			MPI_Isend(Matrix[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSend);
+			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSend);
 		}
 		
 		if (options->termination == TERM_PREC)
@@ -337,6 +336,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 			term_iteration--;
 		}
 	}
+	results->m = 0;
 }
 
 /**
