@@ -50,7 +50,7 @@ initVariables (struct calculation_arguments* arguments, struct calculation_resul
 	
 	//safety if interlines > numThreads / 4 
 	//division by 4 to guarantee at least some benefit from paralellization
-	numThreads = (numThreads > (N - 1.0) / 4.0) ? numThreads : floor((N-1) / 4);
+	numThreads = (numThreads > (N - 1.0) / 4.0) ? floor((N-1) / 4) : numThreads;
 	matrix_size =  ceil((float)(N-1) / numThreads);
 	matrix_from = ((uint64_t) (matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
 	matrix_to = ((uint64_t) (matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
@@ -204,8 +204,8 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 
 void calculate (struct calculation_arguments *arguments, struct calculation_results *results,  struct options const* options)
 {
-	int target = rank + 1;
-	int source = rank - 1;
+	int target = (rank + 1);// % numThreads;
+	int source = (rank - 1 + numThreads) - numThreads;//% numThreads;;
 	uint64_t i, j = 0;
 
 	uint64_t const N = arguments->N;
@@ -260,23 +260,25 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	{
 		maxresiduum = 0;
 		
-		#pragma omg parallel for private(j, star, fpi_sini, residuum) reduction(max:maxresiduum)
-    for (i = 1; i < matrix_size + 1; i++)
+		omp_set_dynamic(0);
+		#pragma omp parallel for private(j, star, fpisin_i, residuum) reduction(max:maxresiduum) num_threads(options->number)
+    for (i = 1;  i < matrix_size + 1; i++)
     {
-			omp_set_dynamic(0);
-			omp_set_num_threads(options->number);
     	if (options->inf_func == FUNC_FPISIN)
       {
 				fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
 			}
 
-			// Wait for first row
+			// TODO: only OMP first has to do this, OMP last the other one
+			// Wait for first row to be recieved
 			if(rank > 0 && i == 0)
-				MPI_Wait(&reqRecv, MPI_STATUS_IGNORE);		
-			
-			// Wait for last row
+			{
+				MPI_Recv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			}	
+			// Wait for last row to be sent
 			if(results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size)
 				MPI_Wait(&reqSend, MPI_STATUS_IGNORE);
+
 			
 			for (j = 1; j < N; j++)
 			{
@@ -299,19 +301,15 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		results->stat_iteration++;
 		results->stat_precision = maxresiduum;
 
-		// Recieve first row
-		if (source != -1)
-		{
-			MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecv);
-		}
+
 		// Send last row
 		// ignore last rank because it has no followers /BIG SAD/
 		if (target != numThreads)
 		{
-			printf("%d; %d", rank, target);
 			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSend);
 		}
-		
+
+
 		if (options->termination == TERM_PREC)
 		{	
 			//Reduce Maxresiduum and, if criteria is met, send maxres to other processes to kill them (after some time)
