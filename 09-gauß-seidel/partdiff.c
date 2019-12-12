@@ -6,6 +6,7 @@
 #include <malloc.h>
 #include <sys/time.h>
 #include <mpi.h>
+#include <omp.h>
 #include "partdiff.h"
 
 struct calculation_arguments
@@ -50,7 +51,7 @@ initVariables (struct calculation_arguments* arguments, struct calculation_resul
 	//safety if interlines > numThreads / 4 
 	//division by 4 to guarantee at least some benefit from paralellization
 	numThreads = (numThreads > (N - 1.0) / 4.0) ? numThreads : floor((N-1) / 4);
-  matrix_size =  ceil((float)(N-1) / numThreads);
+	matrix_size =  ceil((float)(N-1) / numThreads);
 	matrix_from = ((uint64_t) (matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
 	matrix_to = ((uint64_t) (matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
   if (matrix_from > matrix_to)
@@ -133,7 +134,7 @@ initMatrices (struct calculation_arguments* arguments, struct options const* opt
     {
         for (i = 0; i < size; i++)
         {
-            for (j = 0; j < N; j++)
+            for (j = 0; j <= N; j++)
             {
                 Matrix[g][i][j] = 0.0;
             }
@@ -259,8 +260,11 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	{
 		maxresiduum = 0;
 		
+		#pragma omg parallel for private(j, star, fpi_sini, residuum) reduction(max:maxresiduum)
     for (i = 1; i < matrix_size + 1; i++)
     {
+			omp_set_dynamic(0);
+			omp_set_num_threads(options->number);
     	if (options->inf_func == FUNC_FPISIN)
       {
 				fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
