@@ -19,6 +19,7 @@ struct calculation_arguments
 
 struct calculation_results
 {
+    uint64_t  m;
 	uint64_t  stat_iteration; /* number of current iteration					*/
 	double	stat_precision; /* actual precision of all slaves in iteration	*/
 };
@@ -80,77 +81,93 @@ static
 void
 allocateMatrices (struct calculation_arguments* arguments)
 {
-	uint64_t i;
+    uint64_t i, j;
 
-	uint64_t const N = arguments->N;
-	uint64_t const size = matrix_size + 2;
+    uint64_t const N = arguments->N;
+    uint64_t const size = matrix_size + 2;
 
-	arguments->M = allocateMemory((N + 1) * size * sizeof(double));
+    arguments->M = allocateMemory(arguments->num_matrices * (N + 1) * size * sizeof(double));
+    arguments->Matrix = allocateMemory(arguments->num_matrices * sizeof(double**));
 
-	arguments->Matrix = allocateMemory((N + 1) * sizeof(double*));
+    for (i = 0; i < arguments->num_matrices; i++)
+    {
+        arguments->Matrix[i] = allocateMemory((N + 1) * sizeof(double*));
 
-	for (i = 0; i <= N; i++)
-	{
-		arguments->Matrix[i] = arguments->M + (i * (N + 1) * size) + (i * (N + 1));
-	}
+        for (j = 0; j <= N; j++)
+        {
+            arguments->Matrix[i][j] = arguments->M + (i * (N + 1) * size) + (j * (N + 1));
+        }
+    }
 }
 
 static
 void
 freeMatrices (struct calculation_arguments* arguments)
 {
-	free(arguments->Matrix);
-	free(arguments->M);
+    uint64_t i;
+
+    for (i = 0; i < arguments->num_matrices; i++)
+    {
+        free(arguments->Matrix[i]);
+    }
+
+    free(arguments->Matrix);
+    free(arguments->M);
 }
 
 static
 void
 initMatrices (struct calculation_arguments* arguments, struct options const* options)
 {
-	// it fit many lööp, brøther
-	uint64_t i, j;
+    // it fit many lööp, brøther
+    uint64_t g, i, j;
 
-	uint64_t const N = arguments->N;
-	uint64_t const size = matrix_size + 2;
+    uint64_t const N = arguments->N;
+    uint64_t const size = matrix_size + 2;
 
-	double const h = arguments->h;
-	double** Matrix = arguments->Matrix;
+    double const h = arguments->h;
+    double*** Matrix = arguments->Matrix;
 
-	// initialize matrix/matrices with zeros
-	for (i = 0; i < size; i++)
-	{
-		for (j = 0; j < N; j++)
-		{
-			Matrix[i][j] = 0.0;
-		}
-	}
-	
-	// initialize borders, depending on function (function 2: nothing to do)
-	if (options->inf_func == FUNC_F0)
-	{
-		for (i = 0; i < size; i++)
-		{
-			Matrix[i][0] = 1.0 - (h * (i + matrix_from - 1));
-			Matrix[i][N] = h * (i + matrix_from - 1);
-		}
-	
-		if (matrix_from == 1)
-		{
-			for (j = 0; j <= N; j++)
-			{
-				Matrix[0][j] = 1.0 - (h * j);
-			}
-		}
-	
-		if (matrix_to >= (N - 1))
-		{
-			for (j = 0; j < N; j++)
-			{
-				Matrix[matrix_size + 1][j] = h * j;
-			}
-		}
-	}
-	MPI_Barrier(MPI_COMM_WORLD);
+    // initialize matrix/matrices with zeros
+    for (g = 0; g < arguments->num_matrices; g++)
+    {
+        for (i = 0; i < size; i++)
+        {
+            for (j = 0; j < N; j++)
+            {
+                Matrix[g][i][j] = 0.0;
+            }
+        }
+    }
+
+    // initialize borders, depending on function (function 2: nothing to do)
+    if (options->inf_func == FUNC_F0)
+    {
+        for (g = 0; g < arguments->num_matrices; g++)
+        {
+            for (i = 0; i < size; i++)
+            {
+                Matrix[g][i][0] = 1.0 - (h * (i + matrix_from - 1));
+                Matrix[g][i][N] = h * (i + matrix_from - 1);
+            }
+
+            if (matrix_from == 1)
+            {
+                for (j = 0; j <= N; j++)
+                {
+                    Matrix[g][0][j] = 1.0 - (h * j);
+                }
+            }
+
+            if (matrix_to >= (N - 1))
+            {
+                for (j = 0; j < N; j++)
+                {
+                    Matrix[g][matrix_size + 1][j] = h * j;
+                }
+            }
+        }
+    }
 }
 
 static
@@ -198,26 +215,32 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 
 	int term_iteration = options->term_iteration;
 
-	double maxresiduum, star, residuum, maxres;
+	double maxresiduum, star, residuum;
+	// it's over 9000!
+	double maxres = 9000.1;
+	
 	MPI_Status status;
-	MPI_Request reqUpper, reqRes;
+	MPI_Request reqSend, reqRecv, reqRes;
 
-	double** Matrix = arguments->Matrix;
+	// there is only one, Neo.
+    double** Matrix_Out = arguments->Matrix[0];
+    double** Matrix_In = arguments->Matrix[0];
+	
 	double maxresidaa[numThreads];
 
 	double fpisin_i = 0.0;
 	
-	//rank 0 prepares for receiving maxresidaa of other processes
-	if(rank == 0 && numThreads > 1)
+	//rank 0 prepares for receiving maxresidaä of other processes
+	if(rank == 0 && options->termination == TERM_PREC)
 	{
-		for(i = 1; i < numThreads; i++)
-			MPI_Irecv(&maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
+		if(numThreads > 1)
+		{
+			for(i = 1; i < numThreads; i++)
+				MPI_Irecv(&maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
+		}
 	}
 	//the others prepare for receiving maxres (the one that cancels this whole operation)
-	else
-		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqUpper);
-	if (options->termination == TERM_PREC && rank != 0)
-	
+	else if(options->termination == TERM_PREC)
 		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 	
 
@@ -226,53 +249,63 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		pih = PI * h;
 		fpisin = 0.25 * TWO_PI_SQUARE * h * h;
 	}
-
+	
+	// Recieve first row, needs to be done before lööp
+	if (source != -1)
+	{
+		MPI_Irecv(Matrix[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &status, &reqRecv);
+	}
+	
 	while(term_iteration > 0)
 	{
 		maxresiduum = 0;
 		
-		//Only wait after first iteration, else we're stuck
-		if(results->stat_iteration > 0 && rank < numThreads - 1)
-			MPI_Wait(&reqUpper, MPI_STATUS_IGNORE);
-		// ignore rank 0 because it has no previous partner (it's still single and lookin' for a soulmate)
-		
-		for (i = 1; i < matrix_size + 1; i++)
-		{
-			if (options->inf_func == FUNC_FPISIN)
-			{
-				fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
-			}
+        for (i = 1; i < matrix_size + 1; i++)
+        {
+            if (options->inf_func == FUNC_FPISIN)
+            {
+                fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
+            }
 			
-			if (source > 0 && i == matrix_size)
-			{
-				MPI_Recv(Matrix[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &status);
-			}
-			for (j = 1; j < N; j++)
-			{
-				star = 0.25 * (Matrix[i-1][j] + Matrix[i][j-1] + Matrix[i][j+1] + Matrix[i+1][j]);
-				if (options->inf_func == FUNC_FPISIN)
-				{
-					star += fpisin_i * sin(pih * j);
-				}
-				if (options->termination == TERM_PREC || term_iteration == 1)
-				{
-					residuum = Matrix[i][j] - star;
-					residuum = (residuum < 0) ? -residuum : residuum;
-					maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
-				}
-				Matrix[i][j] = star;
-			}
-		}
-		
+			// Wait for first row
+			if(rank > 0 && i = 0)
+				MPI_Wait(&reqRecv, MPI_STATUS_IGNORE);		
+			
+			// Wait for last row
+			if(results->stat_iteration > 0 && rank < numThreads - 1 && i = matrix_size)
+				MPI_Wait(&reqSend, MPI_STATUS_IGNORE);
+			
+            for (j = 1; j < N; j++)
+            {
+                star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+                if (options->inf_func == FUNC_FPISIN)
+                {
+                    star += fpisin_i * sin(pih * j);
+                }
+                if (options->termination == TERM_PREC || term_iteration == 1)
+                {
+                    residuum = Matrix_In[i][j] - star;
+                    residuum = (residuum < 0) ? -residuum : residuum;
+                    maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+                }
+                Matrix_Out[i][j] = star;
+            }
+        }
 
 
 		results->stat_iteration++;
 		results->stat_precision = maxresiduum;
 
-		// ignore last rank because it has zero followers (on instagram) /BIG SAD/
+		// Recieve first row
+		if (source != -1)
+		{
+			MPI_Irecv(Matrix[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &status, &reqRecv);
+		}
+		// Send last row
+		// ignore last rank because it has no followers /BIG SAD/
 		if (target < numThreads - 1)
 		{
-			MPI_Isend(Matrix[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqUpper);
+			MPI_Isend(Matrix[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSend);
 		}
 		
 		if (options->termination == TERM_PREC)
@@ -281,7 +314,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 			if(rank == 0)
 			{
 				maxresidaa[0] = maxresiduum;
-				maxres = 0;
+				maxres = 0.0;
 				for(i = 0; i < numThreads; i++)
 				{
 					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
@@ -320,70 +353,70 @@ static
 void
 DisplayMatrix (struct calculation_arguments* arguments, struct calculation_results* results, struct options* options, int rank, int size, int from, int to)
 {
-	int const elements = 8 * options->interlines + 9;
+    int const elements = 8 * options->interlines + 9;
 
-	int x, y;
-	double** Matrix = arguments->Matrix;
-	MPI_Status status;
+    int x, y;
+    double** Matrix = arguments->Matrix[results->m];
+    MPI_Status status;
 
-	/* first line belongs to rank 0 */
-	if (rank == 0)
-		from--;
+    /* first line belongs to rank 0 */
+    if (rank == 0)
+        from--;
 
-	/* last line belongs to rank size - 1 */
-	if (rank + 1 == size)
-		to++;
+    /* last line belongs to rank size - 1 */
+    if (rank + 1 == size)
+        to++;
 
-	if (rank == 0)
-		printf("Matrix:\n");
+    if (rank == 0)
+        printf("Matrix:\n");
 
-	for (y = 0; y < 9; y++)
-	{
-		int line = y * (options->interlines + 1);
+    for (y = 0; y < 9; y++)
+    {
+        int line = y * (options->interlines + 1);
 
-		if (rank == 0)
-		{
-			/* check whether this line belongs to rank 0 */
-			if (line < from || line > to)
-			{
-				/* use the tag to receive the lines in the correct order
-				 * the line is stored in Matrix[0], because we do not need it anymore */
-				MPI_Recv(Matrix[0], elements, MPI_DOUBLE, MPI_ANY_SOURCE, 42 + y, MPI_COMM_WORLD, &status);
-			}
-		}
-		else
-		{
-			if (line >= from && line <= to)
-			{
-				/* if the line belongs to this process, send it to rank 0
-				 * (line - from + 1) is used to calculate the correct local address */
-				MPI_Send(Matrix[line - from + 1], elements, MPI_DOUBLE, 0, 42 + y, MPI_COMM_WORLD);
-			}
-		}
+        if (rank == 0)
+        {
+            /* check whether this line belongs to rank 0 */
+            if (line < from || line > to)
+            {
+                /* use the tag to receive the lines in the correct order
+                 * the line is stored in Matrix[0], because we do not need it anymore */
+                MPI_Recv(Matrix[0], elements, MPI_DOUBLE, MPI_ANY_SOURCE, 42 + y, MPI_COMM_WORLD, &status);
+            }
+        }
+        else
+        {
+            if (line >= from && line <= to)
+            {
+                /* if the line belongs to this process, send it to rank 0
+                 * (line - from + 1) is used to calculate the correct local address */
+                MPI_Send(Matrix[line - from + 1], elements, MPI_DOUBLE, 0, 42 + y, MPI_COMM_WORLD);
+            }
+        }
 
-		if (rank == 0)
-		{
-			for (x = 0; x < 9; x++)
-			{
-				int col = x * (options->interlines + 1);
+        if (rank == 0)
+        {
+            for (x = 0; x < 9; x++)
+            {
+                int col = x * (options->interlines + 1);
 
-				if (line >= from && line <= to)
-				{
-					/* this line belongs to rank 0 */
-					printf("%7.4f", Matrix[line][col]);
-				}
-				else
-				{
-					/* this line belongs to another rank and was received above */
-					printf("%7.4f", Matrix[0][col]);
-				}
-			}
+                if (line >= from && line <= to)
+                {
+                    /* this line belongs to rank 0 */
+                    printf("%7.4f", Matrix[line][col]);
+                }
+                else
+                {
+                    /* this line belongs to another rank and was received above */
+                    printf("%7.4f", Matrix[0][col]);
+                }
+            }
 
-			printf("\n");
-		}
-	}
+            printf("\n");
+        }
+    }
 
-	//fflush(stdout);
+    fflush(stdout);
 }
 
 int main (int argc, char** argv)
