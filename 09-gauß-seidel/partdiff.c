@@ -221,7 +221,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	// guarantees that initial maxres is too high to stop the program
 	double maxres = 9000.1;
 	
-	MPI_Request reqSend, reqRecv, reqRes;
+	MPI_Request reqSendU, reqSendL, reqRecvU, reqRecvL, reqRes;
 
 	// there is only one, Neo.
 	double** Matrix_Out = arguments->Matrix[0];
@@ -253,7 +253,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	
 	// Recieve first row, needs to be done before lööp
 	if (source != -1)
-		MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecv);
+		MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvL);
 	
 	while(term_iteration > 0)
 	{
@@ -268,17 +268,25 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 
 			// Wait for first row to be recieved
 			if(rank > 0 && i == 0)
+			{
+				MPI_Wait(&reqSendL, MPI_STATUS_IGNORE);
 				MPI_Recv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			}
+
+			if(rank > 0 && i == 1)
+				MPI_Isend(Matrix_In[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendL);
 
 			// Wait for last row to be sent
 			if(results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size)
-				MPI_Wait(&reqSend, MPI_STATUS_IGNORE);
-
+			{
+					MPI_Wait(&reqSendU, MPI_STATUS_IGNORE);
+					MPI_Wait(&reqRecvU, MPI_STATUS_IGNORE);
+			}
 			
 			for (j = 1; j < N; j++)
 			{
-  	  			star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
-  				if (options->inf_func == FUNC_FPISIN)
+				star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+				if (options->inf_func == FUNC_FPISIN)
 					star += fpisin_i * sin(pih * j);
 				if (options->termination == TERM_PREC || term_iteration == 1)
 				{
@@ -298,8 +306,10 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		// Send last row
 		// ignore last rank because it has no followers /BIG SAD/
 		if (target != numThreads)
-			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSend);
-
+		{
+			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendU);
+			MPI_Irecv(Matrix_In[matrix_size + 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvU);
+		}
 
 		if (options->termination == TERM_PREC)
 		{	
