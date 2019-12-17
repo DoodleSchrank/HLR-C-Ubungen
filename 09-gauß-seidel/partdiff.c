@@ -82,93 +82,93 @@ static
 void
 allocateMatrices (struct calculation_arguments* arguments)
 {
-    uint64_t i, j;
+	uint64_t i, j;
 
-    uint64_t const N = arguments->N;
-    uint64_t const size = matrix_size + 2;
+	uint64_t const N = arguments->N;
+	uint64_t const size = matrix_size + 2;
 
-    arguments->M = allocateMemory(arguments->num_matrices * (N + 1) * size * sizeof(double));
-    arguments->Matrix = allocateMemory(arguments->num_matrices * sizeof(double**));
+	arguments->M = allocateMemory(arguments->num_matrices * (N + 1) * size * sizeof(double));
+	arguments->Matrix = allocateMemory(arguments->num_matrices * sizeof(double**));
 
-    for (i = 0; i < arguments->num_matrices; i++)
-    {
-        arguments->Matrix[i] = allocateMemory((N + 1) * sizeof(double*));
+	for (i = 0; i < arguments->num_matrices; i++)
+	{
+		arguments->Matrix[i] = allocateMemory((N + 1) * sizeof(double*));
 
-        for (j = 0; j <= N; j++)
-        {
-            arguments->Matrix[i][j] = arguments->M + (i * (N + 1) * size) + (j * (N + 1));
-        }
-    }
+		for (j = 0; j <= N; j++)
+		{
+			arguments->Matrix[i][j] = arguments->M + (i * (N + 1) * size) + (j * (N + 1));
+		}
+	}
 }
 
 static
 void
 freeMatrices (struct calculation_arguments* arguments)
 {
-    uint64_t i;
+	uint64_t i;
 
-    for (i = 0; i < arguments->num_matrices; i++)
-    {
-        free(arguments->Matrix[i]);
-    }
+	for (i = 0; i < arguments->num_matrices; i++)
+	{
+		free(arguments->Matrix[i]);
+	}
 
-    free(arguments->Matrix);
-    free(arguments->M);
+	free(arguments->Matrix);
+	free(arguments->M);
 }
 
 static
 void
 initMatrices (struct calculation_arguments* arguments, struct options const* options)
 {
-    // it fit many lööp, brøther
-    uint64_t g, i, j;
+	// it fit many lööp, brøther
+	uint64_t g, i, j;
 
-    uint64_t const N = arguments->N;
-    uint64_t const size = matrix_size + 2;
+	uint64_t const N = arguments->N;
+	uint64_t const size = matrix_size + 2;
 
-    double const h = arguments->h;
-    double*** Matrix = arguments->Matrix;
+	double const h = arguments->h;
+	double*** Matrix = arguments->Matrix;
 
-    // initialize matrix/matrices with zeros
-    for (g = 0; g < arguments->num_matrices; g++)
-    {
-        for (i = 0; i < size; i++)
-        {
-            for (j = 0; j <= N; j++)
-            {
-                Matrix[g][i][j] = 0.0;
-            }
-        }
-    }
+	// initialize matrix/matrices with zeros
+	for (g = 0; g < arguments->num_matrices; g++)
+	{
+		for (i = 0; i < size; i++)
+		{
+			for (j = 0; j <= N; j++)
+			{
+				Matrix[g][i][j] = 0.0;
+			}
+		}
+	}
 
-    // initialize borders, depending on function (function 2: nothing to do)
-    if (options->inf_func == FUNC_F0)
-    {
-        for (g = 0; g < arguments->num_matrices; g++)
-        {
-            for (i = 0; i < size; i++)
-            {
-                Matrix[g][i][0] = 1.0 - (h * (i + matrix_from - 1));
-                Matrix[g][i][N] = h * (i + matrix_from - 1);
-            }
+	// initialize borders, depending on function (function 2: nothing to do)
+	if (options->inf_func == FUNC_F0)
+	{
+		for (g = 0; g < arguments->num_matrices; g++)
+		{
+			for (i = 0; i < size; i++)
+			{
+				Matrix[g][i][0] = 1.0 - (h * (i + matrix_from - 1));
+				Matrix[g][i][N] = h * (i + matrix_from - 1);
+			}
 
-            if (matrix_from == 1)
-            {
-                for (j = 0; j <= N; j++)
-                {
-                    Matrix[g][0][j] = 1.0 - (h * j);
-                }
-            }
+			if (matrix_from == 1)
+			{
+				for (j = 0; j <= N; j++)
+				{
+					Matrix[g][0][j] = 1.0 - (h * j);
+				}
+			}
 
-            if (matrix_to >= (N - 1))
-            {
-                for (j = 0; j < N; j++)
-                {
-                    Matrix[g][matrix_size + 1][j] = h * j;
-                }
-            }
-        }
-    }
+			if (matrix_to >= (N - 1))
+			{
+				for (j = 0; j < N; j++)
+				{
+					Matrix[g][matrix_size + 1][j] = h * j;
+				}
+			}
+		}
+	}
 }
 
 static
@@ -262,14 +262,13 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		
 		omp_set_dynamic(0);
 		#pragma omp parallel for private(j, star, fpisin_i, residuum) reduction(max:maxresiduum) num_threads(options->number)
-    for (i = 1;  i < matrix_size + 1; i++)
-    {
-    	if (options->inf_func == FUNC_FPISIN)
-      {
+		for (i = 1;  i < matrix_size + 1; i++)
+		{
+			if (options->inf_func == FUNC_FPISIN)
+	  		{
 				fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
 			}
 
-			// TODO: only OMP first has to do this, OMP last the other one
 			// Wait for first row to be recieved
 			if(rank > 0 && i == 0)
 			{
@@ -282,19 +281,19 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 			
 			for (j = 1; j < N; j++)
 			{
-  	  	star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
-  	    if (options->inf_func == FUNC_FPISIN)
+  	  			star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
+  				if (options->inf_func == FUNC_FPISIN)
 				{
 					star += fpisin_i * sin(pih * j);
 				}
 				if (options->termination == TERM_PREC || term_iteration == 1)
 				{
 					residuum = Matrix_In[i][j] - star;
-     	  	residuum = (residuum < 0) ? -residuum : residuum;
-         	maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
-        }
-        Matrix_Out[i][j] = star;
-      }
+					residuum = (residuum < 0) ? -residuum : residuum;
+					maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+				}
+				Matrix_Out[i][j] = star;
+			}
 		}
 
 
@@ -360,70 +359,70 @@ static
 void
 DisplayMatrix (struct calculation_arguments* arguments, struct calculation_results* results, struct options* options, int rank, int size, int from, int to)
 {
-    int const elements = 8 * options->interlines + 9;
+	int const elements = 8 * options->interlines + 9;
 
-    int x, y;
-    double** Matrix = arguments->Matrix[results->m];
-    MPI_Status status;
+	int x, y;
+	double** Matrix = arguments->Matrix[results->m];
+	MPI_Status status;
 
-    /* first line belongs to rank 0 */
-    if (rank == 0)
-        from--;
+	/* first line belongs to rank 0 */
+	if (rank == 0)
+		from--;
 
-    /* last line belongs to rank size - 1 */
-    if (rank + 1 == size)
-        to++;
+	/* last line belongs to rank size - 1 */
+	if (rank + 1 == size)
+		to++;
 
-    if (rank == 0)
-        printf("Matrix:\n");
+	if (rank == 0)
+		printf("Matrix:\n");
 
-    for (y = 0; y < 9; y++)
-    {
-        int line = y * (options->interlines + 1);
+	for (y = 0; y < 9; y++)
+	{
+		int line = y * (options->interlines + 1);
 
-        if (rank == 0)
-        {
-            /* check whether this line belongs to rank 0 */
-            if (line < from || line > to)
-            {
-                /* use the tag to receive the lines in the correct order
-                 * the line is stored in Matrix[0], because we do not need it anymore */
-                MPI_Recv(Matrix[0], elements, MPI_DOUBLE, MPI_ANY_SOURCE, 42 + y, MPI_COMM_WORLD, &status);
-            }
-        }
-        else
-        {
-            if (line >= from && line <= to)
-            {
-                /* if the line belongs to this process, send it to rank 0
-                 * (line - from + 1) is used to calculate the correct local address */
-                MPI_Send(Matrix[line - from + 1], elements, MPI_DOUBLE, 0, 42 + y, MPI_COMM_WORLD);
-            }
-        }
+		if (rank == 0)
+		{
+			/* check whether this line belongs to rank 0 */
+			if (line < from || line > to)
+			{
+				/* use the tag to receive the lines in the correct order
+				 * the line is stored in Matrix[0], because we do not need it anymore */
+				MPI_Recv(Matrix[0], elements, MPI_DOUBLE, MPI_ANY_SOURCE, 42 + y, MPI_COMM_WORLD, &status);
+			}
+		}
+		else
+		{
+			if (line >= from && line <= to)
+			{
+				/* if the line belongs to this process, send it to rank 0
+				 * (line - from + 1) is used to calculate the correct local address */
+				MPI_Send(Matrix[line - from + 1], elements, MPI_DOUBLE, 0, 42 + y, MPI_COMM_WORLD);
+			}
+		}
 
-        if (rank == 0)
-        {
-            for (x = 0; x < 9; x++)
-            {
-                int col = x * (options->interlines + 1);
+		if (rank == 0)
+		{
+			for (x = 0; x < 9; x++)
+			{
+				int col = x * (options->interlines + 1);
 
-                if (line >= from && line <= to)
-                {
-                    /* this line belongs to rank 0 */
-                    printf("%7.4f", Matrix[line][col]);
-                }
-                else
-                {
-                    /* this line belongs to another rank and was received above */
-                    printf("%7.4f", Matrix[0][col]);
-                }
-            }
+				if (line >= from && line <= to)
+				{
+					/* this line belongs to rank 0 */
+					printf("%7.4f", Matrix[line][col]);
+				}
+				else
+				{
+					/* this line belongs to another rank and was received above */
+					printf("%7.4f", Matrix[0][col]);
+				}
+			}
 
-            printf("\n");
-        }
-    }
+			printf("\n");
+		}
+	}
 
-    fflush(stdout);
+	fflush(stdout);
 }
 
 int main (int argc, char** argv)
