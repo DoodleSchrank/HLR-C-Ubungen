@@ -253,9 +253,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	
 	// Recieve first row, needs to be done before lööp
 	if (source != -1)
-	{
 		MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecv);
-	}
 	
 	while(term_iteration > 0)
 	{
@@ -266,15 +264,12 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		for (i = 1;  i < matrix_size + 1; i++)
 		{
 			if (options->inf_func == FUNC_FPISIN)
-	  		{
 				fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
-			}
 
 			// Wait for first row to be recieved
 			if(rank > 0 && i == 0)
-			{
 				MPI_Recv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			}	
+
 			// Wait for last row to be sent
 			if(results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size)
 				MPI_Wait(&reqSend, MPI_STATUS_IGNORE);
@@ -284,9 +279,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 			{
   	  			star = 0.25 * (Matrix_In[i-1][j] + Matrix_In[i][j-1] + Matrix_In[i][j+1] + Matrix_In[i+1][j]);
   				if (options->inf_func == FUNC_FPISIN)
-				{
 					star += fpisin_i * sin(pih * j);
-				}
 				if (options->termination == TERM_PREC || term_iteration == 1)
 				{
 					residuum = Matrix_In[i][j] - star;
@@ -305,9 +298,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 		// Send last row
 		// ignore last rank because it has no followers /BIG SAD/
 		if (target != numThreads)
-		{
 			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSend);
-		}
 
 
 		if (options->termination == TERM_PREC)
@@ -318,30 +309,20 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 				maxresidaa[0] = maxresiduum;
 				maxres = 0.0;
 				for(i = 0; i < numThreads; i++)
-				{
 					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
-				}
-				if(maxresidaa[i] > options->term_precision)
+				if(maxres < options->term_precision)
 				{
 					for(i = 1; i < numThreads; i++)
-					{
 						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
-					}
 				}
 			}
 			else
-			{
 				MPI_Isend(&maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
-			}
 			if (maxres < options->term_precision)
-			{
 				term_iteration = 0;
-			}
 		}
 		else if (options->termination == TERM_ITER)
-		{
 			term_iteration--;
-		}
 	}
 	results->m = 0;
 }
