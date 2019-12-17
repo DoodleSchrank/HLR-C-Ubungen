@@ -204,8 +204,8 @@ displayStatistics (struct calculation_arguments const* arguments, struct calcula
 
 void calculate (struct calculation_arguments *arguments, struct calculation_results *results,  struct options const* options)
 {
-	int target = (rank + 1);// % numThreads;
-	int source = (rank - 1 + numThreads) - numThreads;//% numThreads;;
+	int target = rank + 1;
+	int source = rank - 1;
 	uint64_t i, j = 0;
 
 	uint64_t const N = arguments->N;
@@ -218,6 +218,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 
 	double maxresiduum, star, residuum;
 	// it's over 9000!
+	// guarantees that initial maxres is too high to stop the program
 	double maxres = 9000.1;
 	
 	MPI_Request reqSend, reqRecv, reqRes;
@@ -269,7 +270,6 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 				fpisin_i = fpisin * sin(pih * (i + matrix_from - 1));
 			}
 
-			// TODO: only OMP first has to do this, OMP last the other one
 			// Wait for first row to be recieved
 			if(rank > 0 && i == 0)
 			{
