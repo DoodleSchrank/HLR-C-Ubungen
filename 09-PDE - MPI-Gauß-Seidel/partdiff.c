@@ -27,6 +27,8 @@
 #include <malloc.h>
 #include <sys/time.h>
 #include <float.h>
+#include <omp.h>
+#include <mpi.h>
 
 #include "partdiff.h"
 
@@ -223,8 +225,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
     int source = rank - 1;
     uint64_t i, j = 0;
 	int m1, m2;
-	double residuum;
-	double maxresiduum;
 
 	uint64_t const N = arguments->N;
 	double const h = arguments->h;
@@ -234,13 +234,13 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 	
 	double maxresiduum, star, residuum;
 	double maxres = DBL_MAX;
-    MPI_Status status;
     MPI_Request reqSendFirst, reqSendLast, reqRecvFirst, reqRecvLast, reqRes;
 
     double** Matrix_Out;
     double** Matrix_In;
 
     double fpisin_i = 0.0;
+		double maxresidaa[numThreads];
 
 	int term_iteration = options->term_iteration;
 
@@ -277,7 +277,7 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 
 	// Recieve first row if Gauß-Seidel, needs to be done before lööp
 	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
-		MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvL);
+		MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
 	
 	while (term_iteration > 0)
 	{
@@ -293,8 +293,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 			if (options->inf_func == FUNC_FPISIN)
 				fpisin_i = fpisin * sin(pih * (double)i);
 			
-			#pragma omp single
-			{
 				// Wait for first row to be recieved
 				if(rank > 0 && i == 0)
 				{
@@ -314,7 +312,6 @@ calculate (struct calculation_arguments const* arguments, struct calculation_res
 						MPI_Wait(&reqSendLast, MPI_STATUS_IGNORE);
 						MPI_Wait(&reqRecvLast, MPI_STATUS_IGNORE);
 				}
-			}
 			
 			for (j = 1; j < N; j++)
 			{
@@ -499,31 +496,37 @@ DisplayMatrix (struct calculation_arguments* arguments, struct calculation_resul
 int
 main (int argc, char** argv)
 {
+	MPI_Init(&argc, &argv);
 	struct options options;
 	struct calculation_arguments arguments;
 	struct calculation_results results;
-
-	askParams(&options, argc, argv);
+	
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+	MPI_Comm_size(MPI_COMM_WORLD, &numThreads);
+	askParams(&options, argc, argv, rank);
 
 	initVariables(&arguments, &results, &options);
 
-	allocateMatrices(&arguments);
-	initMatrices(&arguments, &options);
+	// if numthreads > interlines, numthreads gets reduced
+	// thus some threads dont need to work as much
+	//	- lazy bastards
+	if(rank <= numThreads)
+	{
+		allocateMatrices(&arguments);
+		initMatrices(&arguments, &options);
+		gettimeofday(&start_time, NULL);
+		calculate(&arguments, &results, &options);
+		gettimeofday(&comp_time, NULL);
+		MPI_Barrier(MPI_COMM_WORLD);
+																			
+		// Nur Rang 0 gibt die Statistiken aus
+		if (rank == 0)
+			displayStatistics(&arguments, &results, &options);
 
-	gettimeofday(&start_time, NULL);
-	calculate(&arguments, &results, &options);
-	gettimeofday(&comp_time, NULL);
-	
-	MPI_Barrier(MPI_COMM_WORLD);
-    
-    // Nur Rang 0 gibt die Statistiken aus
-    if (rank == 0)
-    {
-        displayStatistics(&arguments, &results, &options);
-    }
-	displayMatrix(&arguments, &results, &options);
-
-	freeMatrices(&arguments);
+		// Für die Matrix muss allerdings jeder was abliefern
+		DisplayMatrix (&arguments, &results, &options, rank, numThreads, matrix_from, matrix_to);
+		freeMatrices(&arguments);
+	}
 	
     MPI_Finalize();
 	return 0;
