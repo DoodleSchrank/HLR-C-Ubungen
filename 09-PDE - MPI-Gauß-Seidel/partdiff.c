@@ -17,27 +17,16 @@
 /* ************************************************************************ */
 /* Include standard header file.											*/
 /* ************************************************************************ */
-#
-define _POSIX_C_SOURCE 200809 L
-
+#define _POSIX_C_SOURCE 200809 L
 #include <stdio.h>
-
 #include <stdlib.h>
-
 #include <stdint.h>
-
 #include <inttypes.h>
-
 #include <math.h>
-
 #include <malloc.h>
-
 #include <sys/time.h>
-
 #include <float.h>
-
 #include <omp.h>
-
 #include <mpi.h>
 
 #include "partdiff.h"
@@ -278,9 +267,8 @@ calculate(struct calculation_arguments
 
 		maxresiduum = 0;
 
-		omp_set_dynamic(0);#
-		pragma omp parallel
-		for private(j, star, fpisin_i, residuum) reduction(max: maxresiduum) num_threads(options - > number)
+		omp_set_dynamic(0);
+		#pragma omp parallel for private(j, star, fpisin_i, residuum) reduction(max: maxresiduum) num_threads(options - > number)
 		for (i = 1; i < N; i++) {
 			if (options - > inf_func == FUNC_FPISIN)
 				fpisin_i = fpisin * sin(pih * (double) i);
