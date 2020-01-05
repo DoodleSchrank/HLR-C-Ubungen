@@ -252,7 +252,7 @@ void calculate (struct calculation_arguments *arguments, struct calculation_resu
 	}
 	
 	// Recieve first row, needs to be done before lööp
-	if (source != -1)
+	if (rank != 0)
 		MPI_Irecv(Matrix_In[0],  N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvL);
 	
 	while(term_iteration > 0)
