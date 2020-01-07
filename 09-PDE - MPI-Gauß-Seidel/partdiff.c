@@ -11,6 +11,8 @@
 
 #include "partdiff.h"
 
+// foobar
+
 struct calculation_arguments {
 	uint64_t N; /* number of spaces between lines (lines=N+1)	 */
 	uint64_t num_matrices; /* number of matrices							 */
