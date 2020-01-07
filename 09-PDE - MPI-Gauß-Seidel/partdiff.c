@@ -145,7 +145,7 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 	// initialize matrix/matrices with zeros
 	for (g = 0; g < arguments->num_matrices; g++) {
 		for (i = 0; i < size; i++) {
-			for (j = 0; j < N; j++) {
+			for (j = 0; j <= N; j++) {
 				Matrix[g][i][j] = 0.0;
 			}
 		}
