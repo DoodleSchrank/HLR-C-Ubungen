@@ -60,7 +60,7 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 
 	// safety if interlines > numThreads / 4 
 	// division by 4 to guarantee at least some benefit from paralellization
-	numThreads = (numThreads > (N - 1) / 4) ? numThreads : floor((N - 1) / 4);
+	numThreads = ((uint64_t)numThreads > (N - 1) / 4) ? numThreads : floor((N - 1) / 4);
 	matrix_size = ceil((float)(N - 1) / numThreads);
 	matrix_from = ((uint64_t)(matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
 	matrix_to = ((uint64_t)(matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
@@ -185,10 +185,8 @@ calculate(struct calculation_arguments
 	uint64_t i, j = 0;
 	int m1, m2;
 
-	uint64_t
-	const N = arguments->N;
-	double
-	const h = arguments->h;
+	uint64_t const N = arguments->N;
+	double const h = arguments->h;
 
 	double pih = 0.0;
 	double fpisin = 0.0;
@@ -221,13 +219,16 @@ calculate(struct calculation_arguments
 	//rank 0 prepares for receiving maxresidaä of other processes
 	if (rank == 0 && options->termination == TERM_PREC) {
 		if (numThreads > 1) {
-			for (i = 1; i < numThreads; i++)
+			for (i = 1; i < (uint64_t)numThreads; i++)
 				MPI_Irecv( & maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, & reqRes);
 		}
 	}
 	//the others prepare for receiving maxres (the one that cancels this whole operation)
 	else if (options->termination == TERM_PREC)
 		MPI_Irecv( & maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, & reqRes);
+
+	Matrix_Out = arguments->Matrix[m1];
+	Matrix_In = arguments->Matrix[m2];
 
 	// Recieve first row if Gauß-Seidel, needs to be done before lööp
 	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
@@ -296,10 +297,10 @@ calculate(struct calculation_arguments
 			if (rank == 0) {
 				maxresidaa[0] = maxresiduum;
 				maxres = 0.0;
-				for (i = 0; i < numThreads; i++)
+				for (i = 0; i < (uint64_t)numThreads; i++)
 					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
 				if (maxres < options->term_precision) {
-					for (i = 1; i < numThreads; i++)
+					for (i = 1; i < (uint64_t)numThreads; i++)
 						MPI_Isend( & maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, & reqRes);
 				}
 			} else
