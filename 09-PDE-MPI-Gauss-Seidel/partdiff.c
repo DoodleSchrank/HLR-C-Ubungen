@@ -11,8 +11,6 @@
 
 #include "partdiff.h"
 
-// foobar
-
 struct calculation_arguments {
 	uint64_t N; /* number of spaces between lines (lines=N+1)	 */
 	uint64_t num_matrices; /* number of matrices							 */
@@ -61,9 +59,11 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	// safety if interlines > numThreads / 4 
 	// division by 4 to guarantee at least some benefit from paralellization
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
-	numThreads = ((uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
-	int preMatSize = floor((float)(N + 1) / numThreads) + 1;
-	int preMatSizeMod = (float)(N + 1) % numThreads;
+	numThreads = (uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
+	int preMatSize = floor((float)(N + 1) / numThreads);
+	// Rest (ungleiche Verteilung) draufaddieren (nicht für den ersten und letzten Thread
+	preMatSize += (numThreads > 1 && rank != numThreads - 1 && rank != 0) ? 1 : 0;
+	int preMatSizeMod = (N + 1) % numThreads;
 	matrix_size = (rank < preMatSizeMod) ? preMatSize + 1 : preMatSize;
 	matrix_from = ((uint64_t)(matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
 	matrix_to = ((uint64_t)(matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
@@ -147,8 +147,8 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 
 	// initialize matrix/matrices with zeros
 	for (g = 0; g < arguments->num_matrices; g++) {
-		for (i = 0; i < size; i++) {
-			for (j = 0; j <= N; j++) {
+		for (i = 0; i <= N; i++) {
+			for (j = 0; j < matrix_size; j++) {
 				Matrix[g][i][j] = 0.0;
 			}
 		}
@@ -157,7 +157,7 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 	// initialize borders, depending on function (function 2: nothing to do)
 	if (options->inf_func == FUNC_F0) {
 		for (g = 0; g < arguments->num_matrices; g++) {
-			for (i = 0; i < size; i++) {
+			for (i = 0; i < matrix_size; i++) {
 				Matrix[g][i][0] = 1.0 - (h * (i + matrix_from - 1));
 				Matrix[g][i][N] = h * (i + matrix_from - 1);
 			}
@@ -168,8 +168,8 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 			}
 
 			if (matrix_to >= (N - 1)) {
-				for (j = 0; j < N; j++)
-					Matrix[g][matrix_size + 1][j] = h * j;
+				for (j = 0; j <= N; j++)
+					Matrix[g][matrix_size - 1][j] = h * j;
 			}
 		}
 	}
