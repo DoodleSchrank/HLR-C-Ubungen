@@ -60,8 +60,11 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 
 	// safety if interlines > numThreads / 4 
 	// division by 4 to guarantee at least some benefit from paralellization
-	numThreads = ((uint64_t)numThreads > (N - 1) / 4) ? numThreads : floor((N - 1) / 4);
-	matrix_size = ceil((float)(N - 1) / numThreads);
+	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
+	numThreads = ((uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
+	int preMatSize = floor((float)(N + 1) / numThreads) + 1;
+	int preMatSizeMod = (float)(N + 1) % numThreads;
+	matrix_size = (rank < preMatSizeMod) ? preMatSize + 1 : preMatSize;
 	matrix_from = ((uint64_t)(matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
 	matrix_to = ((uint64_t)(matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
 	if (matrix_from > matrix_to) {
