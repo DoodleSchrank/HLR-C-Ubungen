@@ -79,11 +79,15 @@ freeMatrices(struct calculation_arguments * arguments) {
 	uint64_t i;
 
 	for (i = 0; i < arguments->num_matrices; i++) {
+		printf("(rank %d) free#1.%ld: %p\n", rank, i, (void *)arguments->Matrix[i]);
 		free(arguments->Matrix[i]);
 	}
 
+	printf("(rank %d) free#2: %p\n", rank, (void *)arguments->Matrix);
 	free(arguments->Matrix);
-	free(arguments->M);
+	printf("(rank %d) free#3: %p\n", rank, (void *)arguments->M);
+	//free(arguments->M);
+	printf("(rank %d) free#4\n", rank);
 }
 
 /* ************************************************************************ */
@@ -220,19 +224,19 @@ calculate(struct calculation_arguments
 	if (rank == 0 && options->termination == TERM_PREC) {
 		if (numThreads > 1) {
 			for (i = 1; i < (uint64_t)numThreads; i++)
-				MPI_Irecv( & maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, & reqRes);
+				MPI_Irecv( & maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 		}
 	}
 	//the others prepare for receiving maxres (the one that cancels this whole operation)
 	else if (options->termination == TERM_PREC)
-		MPI_Irecv( & maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, & reqRes);
+		MPI_Irecv( & maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 
 	Matrix_Out = arguments->Matrix[m1];
 	Matrix_In = arguments->Matrix[m2];
 
 	// Recieve first row if Gauß-Seidel, needs to be done before lööp
 	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
-		MPI_Irecv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, & reqRecvFirst);
+		MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
 	while (term_iteration > 0) {
 		Matrix_Out = arguments->Matrix[m1];
@@ -240,28 +244,28 @@ calculate(struct calculation_arguments
 
 		maxresiduum = 0;
 
-		omp_set_dynamic(0);
-		#pragma omp parallel for private(j, star, residuum) reduction(max: maxresiduum) num_threads(options->number)
+		//omp_set_dynamic(0);
+		//#pragma omp parallel for private(j, star, residuum) reduction(max: maxresiduum) num_threads(options->number)
 		for (i = 1; i < N; i++) {
 			double fpisin_i = 0.0;
 			if (options->inf_func == FUNC_FPISIN)
 				fpisin_i = fpisin * sin(pih * (double) i);
 
 			// Wait for first row to be recieved
-			if (rank > 0 && i == 0) {
-				MPI_Wait( & reqSendFirst, MPI_STATUS_IGNORE);
-				MPI_Wait( & reqRecvFirst, MPI_STATUS_IGNORE);
+			if (rank > 0 && i == 0 && results->stat_iteration > 0) {
+				MPI_Wait( &reqSendFirst, MPI_STATUS_IGNORE);
+				MPI_Wait( &reqRecvFirst, MPI_STATUS_IGNORE);
 			}
 			// First row to be sent
 			if (rank > 0 && i == 1) {
-				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, & reqSendFirst);
-				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, & reqRecvFirst);
+				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
+				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
 			}
 
 			// Wait for last row to be sent
-			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size) {
-				MPI_Wait( & reqSendLast, MPI_STATUS_IGNORE);
-				MPI_Wait( & reqRecvLast, MPI_STATUS_IGNORE);
+			if (results->stat_iteration > 0 &&rank < numThreads - 1 && i == matrix_size) {
+				MPI_Wait( &reqSendLast, MPI_STATUS_IGNORE);
+				MPI_Wait( &reqRecvLast, MPI_STATUS_IGNORE);
 			}
 
 			for (j = 1; j < N; j++) {
@@ -282,8 +286,8 @@ calculate(struct calculation_arguments
 		// Send last row
 		// ignore last rank because it has no followers /BIG SAD/
 		if (rank < numThreads - 1) {
-			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, & reqSendLast);
-			MPI_Irecv(Matrix_Out[matrix_size + 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, & reqRecvLast);
+			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
+			MPI_Irecv(Matrix_Out[matrix_size + 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
 		}
 
 		/* exchange m1 and m2 */
@@ -301,10 +305,10 @@ calculate(struct calculation_arguments
 					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
 				if (maxres < options->term_precision) {
 					for (i = 1; i < (uint64_t)numThreads; i++)
-						MPI_Isend( & maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, & reqRes);
+						MPI_Isend( & maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 				}
 			} else
-				MPI_Isend( & maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, & reqRes);
+				MPI_Isend( & maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 			if (maxres < options->term_precision)
 				term_iteration = 0;
 		} else if (options->termination == TERM_ITER) {
@@ -431,30 +435,30 @@ main(int argc, char ** argv) {
 	struct calculation_arguments arguments;
 	struct calculation_results results;
 
-	MPI_Comm_rank(MPI_COMM_WORLD, & rank);
+	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, & numThreads);
 	askParams( & options, argc, argv, rank);
 
-	initVariables( & arguments, & results, & options);
+	initVariables(&arguments, &results, & options);
 
 	// if numthreads > interlines, numthreads gets reduced
 	// thus some threads dont need to work as much
 	//	- lazy bastards
 	if (rank <= numThreads) {
-		allocateMatrices( & arguments);
-		initMatrices( & arguments, & options);
-		gettimeofday( & start_time, NULL);
-		calculate( & arguments, & results, & options);
-		gettimeofday( & comp_time, NULL);
+		allocateMatrices(&arguments);
+		initMatrices(&arguments, &options);
+		gettimeofday(&start_time, NULL);
+		calculate(&arguments, &results, &options);
+		gettimeofday(&comp_time, NULL);
 		MPI_Barrier(MPI_COMM_WORLD);
 
 		// Nur Rang 0 gibt die Statistiken aus
 		if (rank == 0)
-			displayStatistics( & arguments, & results, & options);
+			displayStatistics(&arguments, &results, &options); //TODO:reenable
 
 		// Für die Matrix muss allerdings jeder was abliefern
-		DisplayMatrix( & arguments, & results, & options, rank, numThreads, matrix_from, matrix_to);
-		freeMatrices( & arguments);
+		DisplayMatrix(&arguments, &results, &options, rank, numThreads, matrix_from, matrix_to); //TODO:reenable
+		freeMatrices(&arguments);
 	}
 
 	MPI_Finalize();
