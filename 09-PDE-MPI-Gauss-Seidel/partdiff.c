@@ -79,15 +79,11 @@ freeMatrices(struct calculation_arguments * arguments) {
 	uint64_t i;
 
 	for (i = 0; i < arguments->num_matrices; i++) {
-		printf("(rank %d) free#1.%ld: %p\n", rank, i, (void *)arguments->Matrix[i]);
 		free(arguments->Matrix[i]);
 	}
 
-	printf("(rank %d) free#2: %p\n", rank, (void *)arguments->Matrix);
 	free(arguments->Matrix);
-	printf("(rank %d) free#3: %p\n", rank, (void *)arguments->M);
-	//free(arguments->M);
-	printf("(rank %d) free#4\n", rank);
+	free(arguments->M);
 }
 
 /* ************************************************************************ */
@@ -252,12 +248,12 @@ calculate(struct calculation_arguments
 				fpisin_i = fpisin * sin(pih * (double) i);
 
 			// Wait for first row to be recieved
-			if (rank > 0 && i == 0 && results->stat_iteration > 0) {
+			if (rank > 0 && i == 1 && results->stat_iteration > 0) {
 				MPI_Wait( &reqSendFirst, MPI_STATUS_IGNORE);
 				MPI_Wait( &reqRecvFirst, MPI_STATUS_IGNORE);
 			}
 			// First row to be sent
-			if (rank > 0 && i == 1) {
+			if (rank > 0 && i == 2) {
 				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
 				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
 			}
@@ -444,7 +440,7 @@ main(int argc, char ** argv) {
 	// if numthreads > interlines, numthreads gets reduced
 	// thus some threads dont need to work as much
 	//	- lazy bastards
-	if (rank <= numThreads) {
+	if (rank < numThreads) {
 		allocateMatrices(&arguments);
 		initMatrices(&arguments, &options);
 		gettimeofday(&start_time, NULL);
