@@ -285,8 +285,8 @@ calculate(struct calculation_arguments
 		// Send last row
 		// ignore last rank because it has no followers /BIG SAD/
 		if (rank < numThreads - 1) {
-			MPI_Isend(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
-			MPI_Irecv(Matrix_Out[matrix_size + 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
+			MPI_Isend(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
+			MPI_Irecv(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
 		}
 
 		/* exchange m1 and m2 */
