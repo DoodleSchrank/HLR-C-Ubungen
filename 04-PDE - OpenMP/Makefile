@@ -2,15 +2,15 @@
 CC = gcc
 
 # Compiler flags, paths and libraries
-CFLAGS = -std=c11 -pedantic -Wall -Wextra -O3 -ggdb -fopenmp
+CFLAGS = -std=c11 -pedantic -Wall -Wextra -O0 -ggdb -fopenmp
 LFLAGS = $(CFLAGS)
 LIBS   = -lm
 
-TGTS = partdiff-openmp partdiff-openmp-zeilen partdiff-openmp-spalten partdiff-openmp-element
-OBJS = askparams.o partdiff-openmp-zeilen.o partdiff-openmp-spalten.o partdiff-openmp-element.o
+TGTS = partdiff-openmp partdiff-openmp-zeilen partdiff-openmp-spalten partdiff-openmp-element partdiff
+OBJS = askparams.o partdiff-openmp-zeilen.o partdiff-openmp-spalten.o partdiff-openmp-element.o partdiff.o
 
 # Targets ...
-all: partdiff-openmp partdiff-openmp-zeilen partdiff-openmp-spalten partdiff-openmp-element
+all: partdiff-openmp partdiff-openmp-zeilen partdiff-openmp-spalten partdiff-openmp-element partdiff
 
 partdiff: partdiff.o askparams.o
 	$(CC) $(LFLAGS) -o $@ partdiff.o askparams.o $(LIBS)
