@@ -117,19 +117,17 @@ void
 allocateMatrices(struct calculation_arguments * arguments) {
 	uint64_t i, j;
 
-	uint64_t
-	const N = arguments->N;
-	uint64_t
-	const size = matrix_size + 2;
+	uint64_t const N = arguments->N;
 
-	arguments->M = allocateMemory(arguments->num_matrices * (N + 1) * size * sizeof(double));
+	arguments->M = allocateMemory(arguments->num_matrices * (N + 1) * matrix_size * sizeof(double));
 	arguments->Matrix = allocateMemory(arguments->num_matrices * sizeof(double ** ));
 
 	for (i = 0; i < arguments->num_matrices; i++) {
 		arguments->Matrix[i] = allocateMemory((N + 1) * sizeof(double * ));
-		for (j = 0; j <= N; j++)
-			arguments->Matrix[i][j] = arguments->M + (i * (N + 1) * size) + (j * (N + 1));
+		for (j = 0; j < matrix_size; j++)
+			arguments->Matrix[i][j] = arguments->M + (i * matrix_size * (N + 1)) + (j * (N + 1));
 	}
+	printf("yay from rank: %d", rank);
 }
 
 /* ************************************************************************ */
@@ -431,18 +429,17 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 /*  main																	*/
 /* ************************************************************************ */
 int
-main(int argc, char ** argv) {
-	MPI_Init( & argc, & argv);
+main(int argc, char **argv) {
+	MPI_Init(&argc, &argv);
 	struct options options;
 	struct calculation_arguments arguments;
 	struct calculation_results results;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, & numThreads);
-	askParams( & options, argc, argv, rank);
 
-	initVariables(&arguments, &results, & options);
-	printf("Threads: %d", numThreads);
+	askParams(&options, argc, argv, rank);
+	initVariables(&arguments, &results, &options);
 
 	// if numthreads > interlines, numthreads gets reduced
 	// thus some threads dont need to work as much
@@ -450,10 +447,11 @@ main(int argc, char ** argv) {
 	if (rank < numThreads) {
 		allocateMatrices(&arguments);
 		initMatrices(&arguments, &options);
-		printf("Rank: %d, size: %ld\n", rank, matrix_size);
+
 		gettimeofday(&start_time, NULL);
 		calculate(&arguments, &results, &options);
 		gettimeofday(&comp_time, NULL);
+		
 		MPI_Barrier(MPI_COMM_WORLD);
 
 		// Nur Rang 0 gibt die Statistiken aus
