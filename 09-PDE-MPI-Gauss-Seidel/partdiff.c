@@ -264,7 +264,7 @@ calculate(struct calculation_arguments
 
 			// Wait for last row to be sent
 			// i = matrix_size - 2 because thats the last row to be calculated
-			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2) {
+			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2 && results->stat_iteration > 0) {
 				MPI_Wait(&reqSendLast, MPI_STATUS_IGNORE);
 				MPI_Wait(&reqRecvLast, MPI_STATUS_IGNORE);
 			}
@@ -441,6 +441,7 @@ main(int argc, char ** argv) {
 	askParams( & options, argc, argv, rank);
 
 	initVariables(&arguments, &results, & options);
+	printf("Threads: %d", numThreads);
 
 	// if numthreads > interlines, numthreads gets reduced
 	// thus some threads dont need to work as much
@@ -448,6 +449,7 @@ main(int argc, char ** argv) {
 	if (rank < numThreads) {
 		allocateMatrices(&arguments);
 		initMatrices(&arguments, &options);
+		printf("Rank: %d, size: %ld\n", rank, matrix_size);
 		gettimeofday(&start_time, NULL);
 		calculate(&arguments, &results, &options);
 		gettimeofday(&comp_time, NULL);
