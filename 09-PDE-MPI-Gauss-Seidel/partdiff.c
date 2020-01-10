@@ -235,6 +235,10 @@ calculate(struct calculation_arguments
 	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
 		MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+	FILE *fr;
+	fr = fopen("output/firstrow", "w");
+	FILE *lr;
+	lr = fopen("output/lastrow", "w");
 	while (term_iteration > 0) {
 		Matrix_Out = arguments->Matrix[m1];
 		Matrix_In = arguments->Matrix[m2];
@@ -252,6 +256,10 @@ calculate(struct calculation_arguments
 			if (rank > 0 && i == 1 && results->stat_iteration > 0) {
 				MPI_Wait(&reqSendFirst, MPI_STATUS_IGNORE);
 				MPI_Wait(&reqRecvFirst, MPI_STATUS_IGNORE);
+				printf("First row of iteration %ld\n", results->stat_iteration);
+				for(int k = 0; k < N; k++)
+					fprintf(fr, "%7.4f", Matrix_In[0][k]);
+				printf("\n");
 			}
 			// First row to be sent
 			if (rank > 0 && i == 2) {
@@ -264,6 +272,10 @@ calculate(struct calculation_arguments
 			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2 && results->stat_iteration > 0) {
 				MPI_Wait(&reqSendLast, MPI_STATUS_IGNORE);
 				MPI_Wait(&reqRecvLast, MPI_STATUS_IGNORE);
+				printf("Last row of iteration %ld\n", results->stat_iteration);
+				for(int k = 0; k < N; k++)
+					fprintf(lr, "%7.4f", Matrix_In[matrix_size - 1][k]);
+				printf("\n");
 			}
 
 			for (j = 1; j < N; j++) {
@@ -315,7 +327,8 @@ calculate(struct calculation_arguments
 		results->stat_iteration++;
 		results->stat_precision = maxresiduum;
 	}
-
+	fclose(fr);
+	fclose(lr);
 	results->m = m2;
 }
 
@@ -448,7 +461,6 @@ main(int argc, char **argv) {
 	//	- lazy bastards
 	if (rank < numThreads) {
 		allocateMatrices(&arguments);
-		printf("Threads: %d, rank: %d, matrix size: %ld\n", numThreads, rank, matrix_size);
 		initMatrices(&arguments, &options);
 		printf("Threads: %d, rank: %d, matrix size: %ld\n", numThreads, rank, matrix_size);
 
@@ -466,6 +478,8 @@ main(int argc, char **argv) {
 		DisplayMatrix(&arguments, &results);
 		freeMatrices(&arguments);
 	}
+	MPI_Barrier(MPI_COMM_WORLD);
+	printf("rank: %d sagt tschüss\n", rank);
 
 	MPI_Finalize();
 	return 0;
