@@ -1,11 +1,11 @@
 #!/bin/bash
 
 # Single Thread:
-#BINARY="./partdiff-par"
+BINARY="./partdiff-par"
 
 
 # MPI:
-BINARY="mpirun -np 3 ./partdiff-par"
+#BINARY="mpirun -np 3 ./partdiff-par"
 
 echo 1 2 0 2 2 85
 diff -s <($BINARY 1 2 0 2 2 85 | grep -A9 Matrix) <(cat referenz/Jacobi.f2 | grep -A9 Matrix)

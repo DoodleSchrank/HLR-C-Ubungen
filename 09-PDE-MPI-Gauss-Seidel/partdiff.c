@@ -67,12 +67,12 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	if(rank == 0 || rank == numThreads - 1)
 		matrix_size--;
 	
-	matrix_from = ((uint64_t)(matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
-	matrix_to = ((uint64_t)(matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
+	/*matrix_from = rank * matrix_size;//((uint64_t)(matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
+	matrix_to = rank * matrix_size + matrix_size//((uint64_t)(matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
 	if (matrix_from > matrix_to) {
 		matrix_from = N;
 		matrix_to = N - 1;
-	}
+	}*/
 }
 
 /* ************************************************************************ */
@@ -127,7 +127,6 @@ allocateMatrices(struct calculation_arguments * arguments) {
 		for (j = 0; j < matrix_size; j++)
 			arguments->Matrix[i][j] = arguments->M + (i * matrix_size * (N + 1)) + (j * (N + 1));
 	}
-	printf("yay from rank: %d", rank);
 }
 
 /* ************************************************************************ */
@@ -140,15 +139,14 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 	uint64_t g, i, j;
 
 	uint64_t const N = arguments->N;
-	uint64_t const size = matrix_size + 2;
 
 	double const h = arguments->h;
 	double ** * Matrix = arguments->Matrix;
 
 	// initialize matrix/matrices with zeros
 	for (g = 0; g < arguments->num_matrices; g++) {
-		for (i = 0; i <= N; i++) {
-			for (j = 0; j < matrix_size; j++) {
+		for (i = 0; i < matrix_size; i++) {
+			for (j = 0; j <= N; j++) {
 				Matrix[g][i][j] = 0.0;
 			}
 		}
@@ -158,17 +156,17 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 	if (options->inf_func == FUNC_F0) {
 		for (g = 0; g < arguments->num_matrices; g++) {
 			for (i = 0; i < matrix_size; i++) {
-				Matrix[g][i][0] = 1.0 - (h * (i + matrix_from - 1));
-				Matrix[g][i][N] = h * (i + matrix_from - 1);
+				Matrix[g][i][0] = 1.0 - (h * i);
+				Matrix[g][i][N] = h * i;
 			}
 
-			if (matrix_from == 1) {
+			if (rank == 0) {
 				for (j = 0; j <= N; j++)
 					Matrix[g][0][j] = 1.0 - (h * j);
 			}
 
-			if (matrix_to >= (N - 1)) {
-				for (j = 0; j <= N; j++)
+			if (rank == numThreads - 1) {
+				for (j = 0; j < matrix_size; j++)
 					Matrix[g][matrix_size - 1][j] = h * j;
 			}
 		}
@@ -382,7 +380,7 @@ displayStatistics(struct calculation_arguments
 /****************************************************************************/
 static
 void
-DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results, struct options * options, int rank, int size, int from, int to) {
+DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results, struct options * options) {
 	int
 	const elements = 8 * options->interlines + 9;
 
@@ -390,18 +388,49 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 	double ** Matrix = arguments->Matrix[results->m];
 	MPI_Status status;
 
-	/* first line belongs to rank 0 */
-	if (rank == 0)
-		from--;
-
-	/* last line belongs to rank size - 1 */
-	if (rank + 1 == size)
-		to++;
-
 	if (rank == 0)
 		printf("Matrix:\n");
 
-	for (y = 0; y < 9; y++) {
+	int stopper = 0;
+	
+	int lines = 9;
+	if(rank == 0)
+	{
+		int firstlimit = (numThreads > 1) ? matrix_size - 1 : matrix_size;
+		for(int i = 0; i < firstlimit && lines > 0; i++, lines--)
+		{
+			for(int j = 0; j < 9; j++)
+				printf("%7.4f", Matrix[i][j]);
+		}
+		if(numThreads > 1)
+		{
+			double data[N+1];
+			for(int i = 0; i < matrix_size && lines > 0; i++)
+			{
+				MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				MPI_Recv(&data, N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				for(int j = 0; j < N+1; j++)
+					printf("%7.4f", data[j]);
+			}
+			stopper = 1;
+			MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		}
+	}
+	else
+	{
+		for(int i = 1; i < matrix_size; i++)
+		{
+			MPI_Recv(&stopper, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			if(stopper == 0)
+			{
+				MPI_Send(Matrix[i], N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			}
+			else
+				i = matrix_size;
+		}
+	}
+
+	/*for (y = 0; y < 9; y++) {
 		int line = y * (options->interlines + 1);
 		if (rank == 0) {
 			if (line < from || line > to)
@@ -421,7 +450,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 			}
 			printf("\n");
 		}
-	}
+	}*/
 	fflush(stdout);
 }
 
@@ -446,7 +475,9 @@ main(int argc, char **argv) {
 	//	- lazy bastards
 	if (rank < numThreads) {
 		allocateMatrices(&arguments);
+		printf("Threads: %d, rank: %d, matrix size: %ld\n", numThreads, rank, matrix_size);
 		initMatrices(&arguments, &options);
+		printf("Threads: %d, rank: %d, matrix size: %ld\n", numThreads, rank, matrix_size);
 
 		gettimeofday(&start_time, NULL);
 		calculate(&arguments, &results, &options);
@@ -459,7 +490,7 @@ main(int argc, char **argv) {
 			displayStatistics(&arguments, &results, &options); //TODO:reenable
 
 		// Für die Matrix muss allerdings jeder was abliefern
-		DisplayMatrix(&arguments, &results, &options, rank, numThreads, matrix_from, matrix_to); //TODO:reenable
+		DisplayMatrix(&arguments, &results, &options); //TODO:reenable
 		freeMatrices(&arguments);
 	}
 
