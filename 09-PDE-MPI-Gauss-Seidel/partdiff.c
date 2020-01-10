@@ -381,39 +381,35 @@ displayStatistics(struct calculation_arguments
 static
 void
 DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results, struct options * options) {
-	int
-	const elements = 8 * options->interlines + 9;
-
-	int x, y;
 	double ** Matrix = arguments->Matrix[results->m];
-	MPI_Status status;
 
-	if (rank == 0)
-		printf("Matrix:\n");
-
+	int N = arguments->N;
 	int stopper = 0;
 	
 	int lines = 9;
 	if(rank == 0)
 	{
+		printf("Matrix:\n");
 		int firstlimit = (numThreads > 1) ? matrix_size - 1 : matrix_size;
 		for(int i = 0; i < firstlimit && lines > 0; i++, lines--)
 		{
 			for(int j = 0; j < 9; j++)
 				printf("%7.4f", Matrix[i][j]);
+			printf("\n");
 		}
 		if(numThreads > 1)
 		{
 			double data[N+1];
 			for(int i = 0; i < matrix_size && lines > 0; i++)
 			{
-				MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+				MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 				MPI_Recv(&data, N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				for(int j = 0; j < N+1; j++)
 					printf("%7.4f", data[j]);
+				printf("\n");
 			}
 			stopper = 1;
-			MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+			MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 		}
 	}
 	else
@@ -422,35 +418,11 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 		{
 			MPI_Recv(&stopper, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			if(stopper == 0)
-			{
-				MPI_Send(Matrix[i], N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			}
+				MPI_Send(Matrix[i], N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD);
 			else
 				i = matrix_size;
 		}
 	}
-
-	/*for (y = 0; y < 9; y++) {
-		int line = y * (options->interlines + 1);
-		if (rank == 0) {
-			if (line < from || line > to)
-				MPI_Recv(Matrix[0], elements, MPI_DOUBLE, MPI_ANY_SOURCE, 42 + y, MPI_COMM_WORLD, & status);
-		} else {
-			if (line >= from && line <= to)
-				MPI_Send(Matrix[line - from + 1], elements, MPI_DOUBLE, 0, 42 + y, MPI_COMM_WORLD);
-		}
-
-		if (rank == 0) {
-			for (x = 0; x < 9; x++) {
-				int col = x * (options->interlines + 1);
-				if (line >= from && line <= to)
-					printf("%7.4f", Matrix[line][col]);
-				else
-					printf("%7.4f", Matrix[0][col]);
-			}
-			printf("\n");
-		}
-	}*/
 	fflush(stdout);
 }
 
