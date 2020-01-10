@@ -3,6 +3,7 @@
 # Single Thread:
 #BINARY="./partdiff-par"
 
+
 # MPI:
 BINARY="mpirun -np 3 ./partdiff-par"
 

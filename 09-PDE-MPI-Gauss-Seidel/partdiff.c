@@ -60,7 +60,7 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	// division by 4 to guarantee at least some benefit from paralellization
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
 	numThreads = (uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
-	matrix_size = floor((N + 1) / numThreads);
+	matrix_size = floor(N / numThreads);
 	matrix_size += 2;
 	if(rank < (N + 1) % numThreads)
 		matrix_size++;
