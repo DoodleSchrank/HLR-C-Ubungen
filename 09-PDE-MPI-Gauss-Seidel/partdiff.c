@@ -62,7 +62,7 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	numThreads = (uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
 	matrix_size = floor(N / numThreads);
 	matrix_size += 2;
-	if(rank < (N + 1) % numThreads)
+	if((uint64_t) rank < (N + 1) % numThreads)
 		matrix_size++;
 	if(rank == 0 || rank == numThreads - 1)
 		matrix_size--;
@@ -380,7 +380,7 @@ displayStatistics(struct calculation_arguments
 /****************************************************************************/
 static
 void
-DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results, struct options * options) {
+DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results) {
 	double ** Matrix = arguments->Matrix[results->m];
 
 	int N = arguments->N;
@@ -400,7 +400,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 		if(numThreads > 1)
 		{
 			double data[N+1];
-			for(int i = 0; i < matrix_size && lines > 0; i++)
+			for(uint64_t i = 0; i < matrix_size && lines > 0; i++)
 			{
 				MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
 				MPI_Recv(&data, N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
@@ -414,7 +414,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 	}
 	else
 	{
-		for(int i = 1; i < matrix_size; i++)
+		for(uint64_t i = 1; i < matrix_size; i++)
 		{
 			MPI_Recv(&stopper, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			if(stopper == 0)
@@ -459,10 +459,10 @@ main(int argc, char **argv) {
 
 		// Nur Rang 0 gibt die Statistiken aus
 		if (rank == 0)
-			displayStatistics(&arguments, &results, &options); //TODO:reenable
+			displayStatistics(&arguments, &results, &options);
 
 		// Für die Matrix muss allerdings jeder was abliefern
-		DisplayMatrix(&arguments, &results, &options); //TODO:reenable
+		DisplayMatrix(&arguments, &results);
 		freeMatrices(&arguments);
 	}
 
