@@ -60,9 +60,9 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	// division by 4 to guarantee at least some benefit from paralellization
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
 	numThreads = (uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
-	int preMatSize = floor((float)(N + 1) / numThreads);
+	int preMatSize = floor((float)(N + 1) / numThreads) + 1;
 	// Rest (ungleiche Verteilung) draufaddieren (nicht für den ersten und letzten Thread
-	preMatSize += (numThreads > 1 && rank != numThreads - 1 && rank != 0) ? 1 : 0;
+	preMatSize += (numThreads > 2 && rank != numThreads - 1 && rank != 0) ? 1 : 0;
 	int preMatSizeMod = (N + 1) % numThreads;
 	matrix_size = (rank < preMatSizeMod) ? preMatSize + 1 : preMatSize;
 	
