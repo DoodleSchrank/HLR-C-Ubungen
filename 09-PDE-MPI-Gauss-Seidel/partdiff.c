@@ -406,6 +406,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 				MPI_Recv(&data, N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 				for(int j = 0; j < N+1; j++)
 					printf("%7.4f", data[j]);
+				lines--;
 				printf("\n");
 			}
 			stopper = 1;
@@ -418,7 +419,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 		{
 			MPI_Recv(&stopper, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 			if(stopper == 0)
-				MPI_Send(Matrix[i], N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD);
+				MPI_Send(Matrix[i], N+1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
 			else
 				i = matrix_size;
 		}
