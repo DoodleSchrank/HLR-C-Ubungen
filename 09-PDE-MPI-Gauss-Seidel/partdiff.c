@@ -245,7 +245,7 @@ calculate(struct calculation_arguments
 
 		//omp_set_dynamic(0);
 		//#pragma omp parallel for private(j, star, residuum) reduction(max: maxresiduum) num_threads(options->number)
-		for (i = 1; i < matrix_size; i++) {
+		for (i = 1; i < matrix_size - 1; i++) {
 			double fpisin_i = 0.0;
 			if (options->inf_func == FUNC_FPISIN)
 				fpisin_i = fpisin * sin(pih * (double) i);
@@ -267,7 +267,7 @@ calculate(struct calculation_arguments
 				MPI_Wait( &reqRecvLast, MPI_STATUS_IGNORE);
 			}
 
-			for (j = 1; j <= N; j++) {
+			for (j = 1; j < N; j++) {
 				star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
 
 				if (options->inf_func == FUNC_FPISIN)
