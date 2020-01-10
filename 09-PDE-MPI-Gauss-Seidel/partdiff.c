@@ -65,6 +65,7 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	preMatSize += (numThreads > 1 && rank != numThreads - 1 && rank != 0) ? 1 : 0;
 	int preMatSizeMod = (N + 1) % numThreads;
 	matrix_size = (rank < preMatSizeMod) ? preMatSize + 1 : preMatSize;
+	
 	matrix_from = ((uint64_t)(matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
 	matrix_to = ((uint64_t)(matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
 	if (matrix_from > matrix_to) {
@@ -223,12 +224,12 @@ calculate(struct calculation_arguments
 	if (rank == 0 && options->termination == TERM_PREC) {
 		if (numThreads > 1) {
 			for (i = 1; i < (uint64_t)numThreads; i++)
-				MPI_Irecv( & maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
+				MPI_Irecv(&maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 		}
 	}
 	//the others prepare for receiving maxres (the one that cancels this whole operation)
 	else if (options->termination == TERM_PREC)
-		MPI_Irecv( & maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
+		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 
 	Matrix_Out = arguments->Matrix[m1];
 	Matrix_In = arguments->Matrix[m2];
@@ -252,8 +253,8 @@ calculate(struct calculation_arguments
 
 			// Wait for first row to be recieved
 			if (rank > 0 && i == 1 && results->stat_iteration > 0) {
-				MPI_Wait( &reqSendFirst, MPI_STATUS_IGNORE);
-				MPI_Wait( &reqRecvFirst, MPI_STATUS_IGNORE);
+				MPI_Wait(&reqSendFirst, MPI_STATUS_IGNORE);
+				MPI_Wait(&reqRecvFirst, MPI_STATUS_IGNORE);
 			}
 			// First row to be sent
 			if (rank > 0 && i == 2) {
@@ -262,9 +263,10 @@ calculate(struct calculation_arguments
 			}
 
 			// Wait for last row to be sent
-			if (results->stat_iteration > 0 &&rank < numThreads - 1 && i == matrix_size) {
-				MPI_Wait( &reqSendLast, MPI_STATUS_IGNORE);
-				MPI_Wait( &reqRecvLast, MPI_STATUS_IGNORE);
+			// i = matrix_size - 2 because thats the last row to be calculated
+			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2) {
+				MPI_Wait(&reqSendLast, MPI_STATUS_IGNORE);
+				MPI_Wait(&reqRecvLast, MPI_STATUS_IGNORE);
 			}
 
 			for (j = 1; j < N; j++) {
@@ -282,11 +284,11 @@ calculate(struct calculation_arguments
 				Matrix_Out[i][j] = star;
 			}
 		}
-		// Send last row
+		// Send last row and recieve lower border
 		// ignore last rank because it has no followers /BIG SAD/
 		if (rank < numThreads - 1) {
-			MPI_Isend(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
-			MPI_Irecv(Matrix_Out[matrix_size], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
+			MPI_Isend(Matrix_Out[matrix_size - 2], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
+			MPI_Irecv(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
 		}
 
 		/* exchange m1 and m2 */
@@ -304,7 +306,7 @@ calculate(struct calculation_arguments
 					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
 				if (maxres < options->term_precision) {
 					for (i = 1; i < (uint64_t)numThreads; i++)
-						MPI_Isend( & maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
+						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 				}
 			} else
 				MPI_Isend( & maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
