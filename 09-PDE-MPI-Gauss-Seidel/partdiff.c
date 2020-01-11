@@ -37,7 +37,7 @@ struct timeval comp_time; /* time when calculation completed				*/
 int rank, numThreads;
 
 //Größe und Anfang & Ende der Teilmatrizen der einzelnen Prozesse
-uint64_t matrix_size, matrix_from, matrix_to;
+uint64_t matrix_size, matrix_from;
 
 /* ************************************************************************ */
 /* initVariables: Initializes some global variables						 */
@@ -62,10 +62,22 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	numThreads = (uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
 	matrix_size = floor(N / numThreads);
 	matrix_size += 2;
+	
 	if((uint64_t) rank < (N + 1) % numThreads)
 		matrix_size++;
 	if(rank == 0 || rank == numThreads - 1)
 		matrix_size--;
+	
+	matrix_from = 0;
+	for(int i = 0; i < rank; i++)
+	{
+		matrix_from += floor(N / numThreads);
+	
+		if((uint64_t) i < (N + 1) % numThreads)
+			matrix_from++;
+		if(i == 0 || i == numThreads - 1)
+			matrix_from--;
+	}
 	
 	/*matrix_from = rank * matrix_size;//((uint64_t)(matrix_size * rank + 1) < N) ? matrix_size * rank + 1 : N;
 	matrix_to = rank * matrix_size + matrix_size//((uint64_t)(matrix_size * (rank + 1)) < (N - 1)) ? matrix_size * (rank + 1) : N - 1;
@@ -334,7 +346,7 @@ calculate(struct calculation_arguments
 				star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
 
 				if (options->inf_func == FUNC_FPISIN)
-					star += fpisin_i * sin(pih * (double) j);
+					star += fpisin_i * sin(pih * (double) (j + matrix_from));
 
 				if (options->termination == TERM_PREC || term_iteration == 1) {
 					residuum = Matrix_In[i][j] - star;
