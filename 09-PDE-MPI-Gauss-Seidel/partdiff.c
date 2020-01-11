@@ -37,7 +37,7 @@ struct timeval comp_time; /* time when calculation completed				*/
 int rank, numThreads;
 
 //Größe und Anfang & Ende der Teilmatrizen der einzelnen Prozesse
-uint64_t matrix_size, matrix_from, *matrix_sizes;
+uint64_t matrix_size, matrix_from;
 
 /* ************************************************************************ */
 /* initVariables: Initializes some global variables						 */
@@ -60,27 +60,23 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	// division by 4 to guarantee at least some benefit from paralellization
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
 	numThreads = (uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
-	matrix_from = 0;
-	matrix_size = 0;
-	matrix_sizes = malloc(numThreads * sizeof(uint64_t));
-	
-	for(int i = 0; i < numThreads; i++)
-	{
-		matrix_size = floor(N / numThreads);
-	
-		if((uint64_t) rank < (N + 1) % numThreads)
-			matrix_size++;
-		if(rank == 0 || rank == numThreads - 1)
-			matrix_size--;
-		matrix_sizes[i] = matrix_size;
-	}
-	matrix_size = matrix_sizes[rank];
+	matrix_size = floor(N / numThreads);
 	matrix_size += 2;
 
+	if((uint64_t) rank < (N + 1) % numThreads)
+		matrix_size++;
+	if(rank == 0 || rank == numThreads - 1)
+		matrix_size--;
+
+	matrix_from = 0;
 	for(int i = 0; i < rank; i++)
 	{
-		matrix_from += matrix_sizes[i];
-	}
+		matrix_from += floor(N / numThreads);
+		if((uint64_t) i < (N + 1) % numThreads)
+			matrix_from++;
+		if(i == 0 || i == numThreads - 1)
+			matrix_from--;
+	}	
 }
 
 /* ************************************************************************ */
@@ -185,47 +181,40 @@ void
 DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results) {
 	double ** Matrix = arguments->Matrix[results->m];
 
-	int N = arguments->N;
-	int stopper = 0;
-	
-	int lines = 9;
+	short lines = 0;
+
 	if(rank == 0)
 	{
+		lines = 9;
 		printf("Matrix:\n");
-		int firstlimit = (numThreads > 1) ? matrix_size - 1 : matrix_size;
-		for(int i = 0; i < firstlimit && lines > 0; i++, lines--)
-		{
-			for(int j = 0; j < 9; j++)
-				printf("%7.4f", Matrix[i][j]);
-			printf("\n");
-		}
-		if(numThreads > 1)
-		{
-			double data[N+1];
-			for(uint64_t i = 0; i < matrix_size && lines > 0; i++)
-			{
-				MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-				MPI_Recv(&data, N+1, MPI_DOUBLE, 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-				for(int j = 0; j < N+1; j++)
-					printf("%7.4f", data[j]);
-				lines--;
-				printf("\n");
-			}
-			stopper = 1;
-			MPI_Send(&stopper, 1, MPI_INT, 1, 0, MPI_COMM_WORLD);
-		}
 	}
-	else
+	if(rank == 0 && lines > 0)
 	{
-		for(uint64_t i = 1; i < matrix_size; i++)
-		{
-			MPI_Recv(&stopper, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-			if(stopper == 0)
-				MPI_Send(Matrix[i], N+1, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD);
-			else
-				i = matrix_size;
-		}
+		for(int j = 0; j < 9; j++)
+			printf("%7.4f", Matrix[0][j]);
+		printf("\n");
+		lines--;
 	}
+	if(rank > 0)
+		MPI_Recv(&lines, 1, MPI_SHORT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+	
+	for(int i = 1; (uint64_t) i < matrix_size - 1 && lines > 0; i++, lines--)
+	{
+		for(int j = 0; j < 9; j++)
+			printf("%7.4f", Matrix[i][j]);
+		printf("\n");
+	}
+
+	if(rank == numThreads - 1 && lines > 0)
+	{
+		for(int j = 0; j < 9; j++)
+			printf("%7.4f", Matrix[matrix_size - 1][j]);
+		lines--;
+		printf("\n");
+	}
+	if(rank != numThreads - 1)
+		MPI_Send(&lines, 1, MPI_SHORT, rank + 1, 0, MPI_COMM_WORLD);
+	
 	fflush(stdout);
 }
 
@@ -459,7 +448,6 @@ main(int argc, char **argv) {
 	struct options options;
 	struct calculation_arguments arguments;
 	struct calculation_results results;
-	MPI_Request req;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, & numThreads);
@@ -484,13 +472,11 @@ main(int argc, char **argv) {
 			displayStatistics(&arguments, &results, &options);
 
 		// Für die Matrix muss allerdings jeder was abliefern
-		uint64_t matrix_to = matrix_from + matrix_size;
-		DisplayMatrix(&arguments, &results, &options, rank, numThreads, matrix_from, matrix_to);
+		DisplayMatrix(&arguments, &results);
 		freeMatrices(&arguments);
 	}
 	// This Barrier doesn't to anything, Threads just run straight through it and then we have the salad!
-	MPI_Ibarrier(MPI_COMM_WORLD, &req);
-	MPI_Wait(&req, MPI_STATUS_IGNORE);
+	MPI_Barrier(MPI_COMM_WORLD);
 	printf("rank: %d sagt tschüss\n", rank);
 
 	MPI_Finalize();
