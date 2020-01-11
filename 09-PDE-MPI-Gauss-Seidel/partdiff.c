@@ -172,215 +172,6 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 		}
 	}
 }
-
-/* ************************************************************************ */
-/* calculate: solves the equation										   */
-/* ************************************************************************ */
-static
-void
-calculate(struct calculation_arguments
-	const * arguments, struct calculation_results * results, struct options
-	const * options) {
-	int target = rank + 1;
-	int source = rank - 1;
-	uint64_t i, j = 0;
-	int m1, m2;
-
-	uint64_t const N = arguments->N;
-	double const h = arguments->h;
-
-	double pih = 0.0;
-	double fpisin = 0.0;
-
-	double maxresiduum, star, residuum;
-	double maxres = DBL_MAX;
-	MPI_Request reqSendFirst, reqSendLast, reqRecvFirst, reqRecvLast, reqRes;
-
-	double ** Matrix_Out;
-	double ** Matrix_In;
-
-	double maxresidaa[numThreads];
-
-	int term_iteration = options->term_iteration;
-
-	/* initialize m1 and m2 depending on algorithm */
-	if (options->method == METH_JACOBI) {
-		m1 = 0;
-		m2 = 1;
-	} else {
-		m1 = 0;
-		m2 = 0;
-	}
-
-	if (options->inf_func == FUNC_FPISIN) {
-		pih = PI * h;
-		fpisin = 0.25 * TWO_PI_SQUARE * h * h;
-	}
-
-	//rank 0 prepares for receiving maxresidaä of other processes
-	if (rank == 0 && options->termination == TERM_PREC) {
-		if (numThreads > 1) {
-			for (i = 1; i < (uint64_t)numThreads; i++)
-				MPI_Irecv(&maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
-		}
-	}
-	//the others prepare for receiving maxres (the one that cancels this whole operation)
-	else if (options->termination == TERM_PREC)
-		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
-
-	Matrix_Out = arguments->Matrix[m1];
-	Matrix_In = arguments->Matrix[m2];
-
-	// Recieve first row if Gauß-Seidel, needs to be done before lööp
-	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
-		MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-	FILE *fr;
-	fr = fopen("output/firstrow", "w");
-	FILE *lr;
-	lr = fopen("output/lastrow", "w");
-	while (term_iteration > 0) {
-		Matrix_Out = arguments->Matrix[m1];
-		Matrix_In = arguments->Matrix[m2];
-
-		maxresiduum = 0;
-
-		//omp_set_dynamic(0);
-		//#pragma omp parallel for private(j, star, residuum) reduction(max: maxresiduum) num_threads(options->number)
-		for (i = 1; i < matrix_size - 1; i++) {
-			double fpisin_i = 0.0;
-			if (options->inf_func == FUNC_FPISIN)
-				fpisin_i = fpisin * sin(pih * (double) i);
-
-			// Wait for first row to be recieved
-			if (rank > 0 && i == 1 && results->stat_iteration > 0) {
-				MPI_Wait(&reqSendFirst, MPI_STATUS_IGNORE);
-				MPI_Wait(&reqRecvFirst, MPI_STATUS_IGNORE);
-				printf("First row of iteration %ld\n", results->stat_iteration);
-				for(int k = 0; k < N; k++)
-					fprintf(fr, "%7.4f", Matrix_In[0][k]);
-				printf("\n");
-			}
-			// First row to be sent
-			if (rank > 0 && i == 2) {
-				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
-				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
-			}
-
-			// Wait for last row to be sent
-			// i = matrix_size - 2 because thats the last row to be calculated
-			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2 && results->stat_iteration > 0) {
-				MPI_Wait(&reqSendLast, MPI_STATUS_IGNORE);
-				MPI_Wait(&reqRecvLast, MPI_STATUS_IGNORE);
-				printf("Last row of iteration %ld\n", results->stat_iteration);
-				for(int k = 0; k < N; k++)
-					fprintf(lr, "%7.4f", Matrix_In[matrix_size - 1][k]);
-				printf("\n");
-			}
-
-			for (j = 1; j < N; j++) {
-				star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
-
-				if (options->inf_func == FUNC_FPISIN)
-					star += fpisin_i * sin(pih * (double) j);
-
-				if (options->termination == TERM_PREC || term_iteration == 1) {
-					residuum = Matrix_In[i][j] - star;
-					residuum = (residuum < 0) ? -residuum : residuum;
-					maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
-				}
-
-				Matrix_Out[i][j] = star;
-			}
-		}
-		// Send last row and recieve lower border
-		// ignore last rank because it has no followers /BIG SAD/
-		if (rank < numThreads - 1) {
-			MPI_Isend(Matrix_Out[matrix_size - 2], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
-			MPI_Irecv(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
-		}
-
-		/* exchange m1 and m2 */
-		i = m1;
-		m1 = m2;
-		m2 = i;
-
-		/* check for stopping calculation depending on termination method */
-		if (options->termination == TERM_PREC) {
-			//Reduce Maxresiduum and, if criteria is met, send maxres to other processes to kill them (after some time)
-			if (rank == 0) {
-				maxresidaa[0] = maxresiduum;
-				maxres = 0.0;
-				for (i = 0; i < (uint64_t)numThreads; i++)
-					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
-				if (maxres < options->term_precision) {
-					for (i = 1; i < (uint64_t)numThreads; i++)
-						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
-				}
-			} else
-				MPI_Isend( & maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
-			if (maxres < options->term_precision)
-				term_iteration = 0;
-		} else if (options->termination == TERM_ITER) {
-			term_iteration--;
-		}
-		results->stat_iteration++;
-		results->stat_precision = maxresiduum;
-	}
-	fclose(fr);
-	fclose(lr);
-	results->m = m2;
-}
-
-/* ************************************************************************ */
-/*  displayStatistics: displays some statistics about the calculation	   */
-/* ************************************************************************ */
-static
-void
-displayStatistics(struct calculation_arguments
-	const * arguments, struct calculation_results
-	const * results, struct options
-	const * options) {
-	int N = arguments->N;
-	double time = (comp_time.tv_sec - start_time.tv_sec) + (comp_time.tv_usec - start_time.tv_usec) * 1e-6;
-
-	printf("Berechnungszeit:	%f s \n", time);
-	printf("Speicherbedarf:	 %f MiB\n", (N + 1) * (N + 1) * sizeof(double) * arguments->num_matrices / 1024.0 / 1024.0);
-	printf("Berechnungsmethode: ");
-
-	if (options->method == METH_GAUSS_SEIDEL) {
-		printf("Gauß-Seidel");
-	} else if (options->method == METH_JACOBI) {
-		printf("Jacobi");
-	}
-
-	printf("\n");
-	printf("Interlines:		 %"
-		PRIu64 "\n", options->interlines);
-	printf("Stoerfunktion:	  ");
-
-	if (options->inf_func == FUNC_F0) {
-		printf("f(x,y) = 0");
-	} else if (options->inf_func == FUNC_FPISIN) {
-		printf("f(x,y) = 2pi^2*sin(pi*x)sin(pi*y)");
-	}
-
-	printf("\n");
-	printf("Terminierung:	   ");
-
-	if (options->termination == TERM_PREC) {
-		printf("Hinreichende Genaugkeit");
-	} else if (options->termination == TERM_ITER) {
-		printf("Anzahl der Iterationen");
-	}
-
-	printf("\n");
-	printf("Anzahl Iterationen: %"
-		PRIu64 "\n", results->stat_iteration);
-	printf("Norm des Fehlers:   %e\n", results->stat_precision);
-	printf("\n");
-}
-
 /****************************************************************************/
 /** Beschreibung der Funktion displayMatrix:							   **/
 /**																		**/
@@ -438,6 +229,201 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 		}
 	}
 	fflush(stdout);
+}
+
+
+/* ************************************************************************ */
+/* calculate: solves the equation										   */
+/* ************************************************************************ */
+static
+void
+calculate(struct calculation_arguments
+	*arguments, struct calculation_results *results, struct options
+	const *options) {
+	int target = rank + 1;
+	int source = rank - 1;
+	uint64_t i, j = 0;
+	int m1, m2;
+
+	uint64_t const N = arguments->N;
+	double const h = arguments->h;
+
+	double pih = 0.0;
+	double fpisin = 0.0;
+
+	double maxresiduum, star, residuum;
+	double maxres = DBL_MAX;
+	MPI_Request reqSendFirst, reqSendLast, reqRecvFirst, reqRecvLast, reqRes;
+
+	double ** Matrix_Out;
+	double ** Matrix_In;
+
+	double maxresidaa[numThreads];
+
+	int term_iteration = options->term_iteration;
+
+	/* initialize m1 and m2 depending on algorithm */
+	if (options->method == METH_JACOBI) {
+		m1 = 0;
+		m2 = 1;
+	} else {
+		m1 = 0;
+		m2 = 0;
+	}
+
+	if (options->inf_func == FUNC_FPISIN) {
+		pih = PI * h;
+		fpisin = 0.25 * TWO_PI_SQUARE * h * h;
+	}
+
+	//rank 0 prepares for receiving maxresidaä of other processes
+	if (rank == 0 && options->termination == TERM_PREC) {
+		if (numThreads > 1) {
+			for (i = 1; i < (uint64_t)numThreads; i++)
+				MPI_Irecv(&maxresidaa[i], 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
+		}
+	}
+	//the others prepare for receiving maxres (the one that cancels this whole operation)
+	else if (options->termination == TERM_PREC)
+		MPI_Irecv(&maxres, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
+
+	Matrix_Out = arguments->Matrix[m1];
+	Matrix_In = arguments->Matrix[m2];
+
+	// Recieve first row if Gauß-Seidel, needs to be done before lööp
+	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
+		MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+	while (term_iteration > 0) {
+		Matrix_Out = arguments->Matrix[m1];
+		Matrix_In = arguments->Matrix[m2];
+
+		maxresiduum = 0;
+
+		//omp_set_dynamic(0);
+		//#pragma omp parallel for private(j, star, residuum) reduction(max: maxresiduum) num_threads(options->number)
+		for (i = 1; i < matrix_size - 1; i++) {
+			double fpisin_i = 0.0;
+			if (options->inf_func == FUNC_FPISIN)
+				fpisin_i = fpisin * sin(pih * (double) i);
+
+			// Wait for first row to be recieved
+			if (rank > 0 && i == 1 && results->stat_iteration > 0) {
+				MPI_Wait(&reqSendFirst, MPI_STATUS_IGNORE);
+				MPI_Wait(&reqRecvFirst, MPI_STATUS_IGNORE);
+			}
+			// First row to be sent
+			if (rank > 0 && i == 2) {
+				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
+				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
+			}
+
+			// Wait for last row to be sent
+			// i = matrix_size - 2 because thats the last row to be calculated
+			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2) {
+				MPI_Wait(&reqSendLast, MPI_STATUS_IGNORE);
+				MPI_Wait(&reqRecvLast, MPI_STATUS_IGNORE);
+			}
+
+			for (j = 1; j < N; j++) {
+				star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
+
+				if (options->inf_func == FUNC_FPISIN)
+					star += fpisin_i * sin(pih * (double) j);
+
+				if (options->termination == TERM_PREC || term_iteration == 1) {
+					residuum = Matrix_In[i][j] - star;
+					residuum = (residuum < 0) ? -residuum : residuum;
+					maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+				}
+
+				Matrix_Out[i][j] = star;
+			}
+		}
+		// Send last row and recieve lower border
+		// ignore last rank because it has no followers /BIG SAD/
+		if (rank < numThreads - 1) {
+			MPI_Isend(Matrix_Out[matrix_size - 2], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
+			MPI_Irecv(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
+		}
+
+		/* exchange m1 and m2 */
+		i = m1;
+		m1 = m2;
+		m2 = i;
+
+		/* check for stopping calculation depending on termination method */
+		if (options->termination == TERM_PREC) {
+			//Reduce Maxresiduum and, if criteria is met, send maxres to other processes to kill them (after some time)
+			if (rank == 0) {
+				maxresidaa[0] = maxresiduum;
+				maxres = 0.0;
+				for (i = 0; i < (uint64_t)numThreads; i++)
+					maxres = (maxresidaa[i] > maxres) ? maxresidaa[i] : maxres;
+				if (maxres < options->term_precision) {
+					for (i = 1; i < (uint64_t)numThreads; i++)
+						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
+				}
+			} else
+				MPI_Isend( & maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
+			if (maxres < options->term_precision)
+				term_iteration = 0;
+		} else if (options->termination == TERM_ITER) {
+			term_iteration--;
+		}
+		results->stat_iteration++;
+		results->stat_precision = maxresiduum;
+	}
+	results->m = m2;
+}
+
+/* ************************************************************************ */
+/*  displayStatistics: displays some statistics about the calculation	   */
+/* ************************************************************************ */
+static
+void
+displayStatistics(struct calculation_arguments
+	const * arguments, struct calculation_results
+	const * results, struct options
+	const * options) {
+	int N = arguments->N;
+	double time = (comp_time.tv_sec - start_time.tv_sec) + (comp_time.tv_usec - start_time.tv_usec) * 1e-6;
+
+	printf("Berechnungszeit:	%f s \n", time);
+	printf("Speicherbedarf:	 %f MiB\n", (N + 1) * (N + 1) * sizeof(double) * arguments->num_matrices / 1024.0 / 1024.0);
+	printf("Berechnungsmethode: ");
+
+	if (options->method == METH_GAUSS_SEIDEL) {
+		printf("Gauß-Seidel");
+	} else if (options->method == METH_JACOBI) {
+		printf("Jacobi");
+	}
+
+	printf("\n");
+	printf("Interlines:		 %"
+		PRIu64 "\n", options->interlines);
+	printf("Stoerfunktion:	  ");
+
+	if (options->inf_func == FUNC_F0) {
+		printf("f(x,y) = 0");
+	} else if (options->inf_func == FUNC_FPISIN) {
+		printf("f(x,y) = 2pi^2*sin(pi*x)sin(pi*y)");
+	}
+
+	printf("\n");
+	printf("Terminierung:	   ");
+
+	if (options->termination == TERM_PREC) {
+		printf("Hinreichende Genaugkeit");
+	} else if (options->termination == TERM_ITER) {
+		printf("Anzahl der Iterationen");
+	}
+
+	printf("\n");
+	printf("Anzahl Iterationen: %"
+		PRIu64 "\n", results->stat_iteration);
+	printf("Norm des Fehlers:   %e\n", results->stat_precision);
+	printf("\n");
 }
 
 /* ************************************************************************ */
