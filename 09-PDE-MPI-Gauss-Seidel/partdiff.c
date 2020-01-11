@@ -294,8 +294,10 @@ calculate(struct calculation_arguments
 	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
 		MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
-	FILE *file;
-	file = open("output/output", w);
+	FILE *file0;
+	FILE *file1;
+	file0 = fopen("output/output0", "w");
+	file1 = fopen("output/output1", "w");
 	
 	while (term_iteration > 0) {
 		Matrix_Out = arguments->Matrix[m1];
@@ -352,22 +354,22 @@ calculate(struct calculation_arguments
 		
 		if(rank == 0)
 		{
-			fprinft(file, "\nIteration: %d", results->stat_iteration);
-			for (i = 1; i < matrix_size - 1; i++) {
-				for (j = 1; j < N; j++) {
-					fprinft(file, "%7.4f", Matrix_In[i][j]);
+			fprintf(file0, "\nIteration: %ld\n", results->stat_iteration);
+			for (i = 0; i < matrix_size; i++) {
+				for (j = 0; j <= N; j++) {
+					fprintf(file0, "%7.4f", Matrix_In[i][j]);
 				}
-				fprinft(file, "\n");
+				fprintf(file0, "\n");
 			}
 		}
-		MPI_Barrier(MPI_COMM_WORLD);
 		if(rank == 1)
 		{
-			for (i = 1; i < matrix_size - 1; i++) {
-				for (j = 1; j < N; j++) {
-					fprinft(file, "%7.4f", Matrix_In[i][j]);
+			fprintf(file1, "\nIteration: %ld\n", results->stat_iteration);
+			for (i = 0; i < matrix_size; i++) {
+				for (j = 0; j <= N; j++) {
+					fprintf(file1, "%7.4f", Matrix_In[i][j]);
 				}
-				fprinft(file, "\n");
+				fprintf(file1, "\n");
 			}
 		}
 		/* exchange m1 and m2 */
@@ -398,7 +400,8 @@ calculate(struct calculation_arguments
 		results->stat_precision = maxresiduum;
 	}
 	results->m = m2;
-	fclose(file);
+	fclose(file0);
+	fclose(file1);
 }
 
 /* ************************************************************************ */
@@ -459,6 +462,7 @@ main(int argc, char **argv) {
 	struct options options;
 	struct calculation_arguments arguments;
 	struct calculation_results results;
+	MPI_Request req;
 
 	MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 	MPI_Comm_size(MPI_COMM_WORLD, & numThreads);
@@ -478,8 +482,6 @@ main(int argc, char **argv) {
 		calculate(&arguments, &results, &options);
 		gettimeofday(&comp_time, NULL);
 		
-		MPI_Barrier(MPI_COMM_WORLD);
-
 		// Nur Rang 0 gibt die Statistiken aus
 		if (rank == 0)
 			displayStatistics(&arguments, &results, &options);
@@ -489,7 +491,8 @@ main(int argc, char **argv) {
 		freeMatrices(&arguments);
 	}
 	// This Barrier doesn't to anything, Threads just run straight through it and then we have the salad!
-	MPI_Barrier(MPI_COMM_WORLD);
+	MPI_Ibarrier(MPI_COMM_WORLD, &req);
+	MPI_Wait(&req, MPI_STATUS_IGNORE);
 	printf("rank: %d sagt tschüss\n", rank);
 
 	MPI_Finalize();
