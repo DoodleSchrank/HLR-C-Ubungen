@@ -180,40 +180,44 @@ static
 void
 DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results) {
 	double ** Matrix = arguments->Matrix[results->m];
+	
+	short *lines = malloc(sizeof(short));
+	*lines = 0;
 
-	short lines = 0;
-
+	// Rank 0 sets line #
 	if(rank == 0)
 	{
-		lines = 9;
+		*lines = 8;
 		printf("Matrix:\n");
-	}
-	if(rank == 0 && lines > 0)
-	{
+
 		for(int j = 0; j < 9; j++)
 			printf("%7.4f", Matrix[0][j]);
 		printf("\n");
-		lines--;
 	}
+
+	// Everybody except rank 0 wait for receiving remaining lines from process rank - 1
 	if(rank > 0)
-		MPI_Recv(&lines, 1, MPI_SHORT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(lines, 1, MPI_SHORT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	
-	for(int i = 1; (uint64_t) i < matrix_size - 1 && lines > 0; i++, lines--)
+	// Print lines 1 through matrix_size - 2, cuz -1 is the last line
+	for(int i = 1; (uint64_t) i < matrix_size - 1 && *lines > 0; i++, (*lines)--)
 	{
 		for(int j = 0; j < 9; j++)
 			printf("%7.4f", Matrix[i][j]);
 		printf("\n");
 	}
-
-	if(rank == numThreads - 1 && lines > 0)
+	
+	// If last thread, print last line
+	if(rank == numThreads - 1 && *lines > 0)
 	{
 		for(int j = 0; j < 9; j++)
 			printf("%7.4f", Matrix[matrix_size - 1][j]);
-		lines--;
+		(*lines)--;
 		printf("\n");
 	}
+	// If not last thread, send # of lines to next rank
 	if(rank != numThreads - 1)
-		MPI_Send(&lines, 1, MPI_SHORT, rank + 1, 0, MPI_COMM_WORLD);
+		MPI_Send(lines, 1, MPI_SHORT, rank + 1, 0, MPI_COMM_WORLD);
 	
 	fflush(stdout);
 }
@@ -388,6 +392,19 @@ calculate(struct calculation_arguments
 	results->m = m2;
 	fclose(file0);
 	fclose(file1);
+
+	if(rank != 0)
+	{
+		MPI_Request_free(&reqSendFirst);
+		MPI_Request_free(&reqRecvFirst);
+	}
+	if(rank != numThreads - 1)
+	{
+		MPI_Request_free(&reqSendLast);
+		MPI_Request_free(&reqRecvLast);
+	}
+	if (options->termination == TERM_PREC)
+		MPI_Request_free(&reqRes);
 }
 
 /* ************************************************************************ */
