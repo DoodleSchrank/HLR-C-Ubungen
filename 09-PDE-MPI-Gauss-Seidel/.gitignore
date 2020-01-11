@@ -1,2 +1,11 @@
 *.o
+*.bin
+*.tar.gz
+*.out
+*.x
+*.swo
+*.swp
+
+output
+output/*
 partdiff-par

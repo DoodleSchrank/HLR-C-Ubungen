@@ -3,3 +3,8 @@
 *.tar.gz
 *.out
 *.x
+*.swo
+*.swp
+
+partdiff
+partdiff-par
