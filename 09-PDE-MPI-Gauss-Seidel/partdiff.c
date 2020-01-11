@@ -294,6 +294,9 @@ calculate(struct calculation_arguments
 	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
 		MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
+	FILE *file;
+	file = open("output/output", w);
+	
 	while (term_iteration > 0) {
 		Matrix_Out = arguments->Matrix[m1];
 		Matrix_In = arguments->Matrix[m2];
@@ -346,7 +349,27 @@ calculate(struct calculation_arguments
 			MPI_Isend(Matrix_Out[matrix_size - 2], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
 			MPI_Irecv(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
 		}
-
+		
+		if(rank == 0)
+		{
+			fprinft(file, "\nIteration: %d", results->stat_iteration);
+			for (i = 1; i < matrix_size - 1; i++) {
+				for (j = 1; j < N; j++) {
+					fprinft(file, "%7.4f", Matrix_In[i][j]);
+				}
+				fprinft(file, "\n");
+			}
+		}
+		MPI_Barrier(MPI_COMM_WORLD);
+		if(rank == 1)
+		{
+			for (i = 1; i < matrix_size - 1; i++) {
+				for (j = 1; j < N; j++) {
+					fprinft(file, "%7.4f", Matrix_In[i][j]);
+				}
+				fprinft(file, "\n");
+			}
+		}
 		/* exchange m1 and m2 */
 		i = m1;
 		m1 = m2;
@@ -365,7 +388,7 @@ calculate(struct calculation_arguments
 						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 				}
 			} else
-				MPI_Isend( & maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
+				MPI_Isend(&maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 			if (maxres < options->term_precision)
 				term_iteration = 0;
 		} else if (options->termination == TERM_ITER) {
@@ -375,6 +398,7 @@ calculate(struct calculation_arguments
 		results->stat_precision = maxresiduum;
 	}
 	results->m = m2;
+	fclose(file);
 }
 
 /* ************************************************************************ */
@@ -464,6 +488,7 @@ main(int argc, char **argv) {
 		DisplayMatrix(&arguments, &results);
 		freeMatrices(&arguments);
 	}
+	// This Barrier doesn't to anything, Threads just run straight through it and then we have the salad!
 	MPI_Barrier(MPI_COMM_WORLD);
 	printf("rank: %d sagt tschüss\n", rank);
 
