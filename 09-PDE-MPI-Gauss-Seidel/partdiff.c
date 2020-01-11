@@ -181,7 +181,7 @@ void
 DisplayMatrix(struct calculation_arguments * arguments, struct calculation_results * results) {
 	double ** Matrix = arguments->Matrix[results->m];
 	
-	short *lines = malloc(sizeof(short));
+	int *lines = malloc(sizeof(int));
 	*lines = 0;
 
 	// Rank 0 sets line #
@@ -198,7 +198,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 
 	// Everybody except rank 0 wait for receiving remaining lines from process rank - 1
 	if(rank > 0)
-		MPI_Recv(lines, 1, MPI_SHORT, rank - 1, 187, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(lines, 1, MPI_INT, rank - 1, 187, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	
 	// Print lines 1 through matrix_size - 2, cuz -1 is the last line
 	for(int i = 1; (uint64_t) i < matrix_size - 1 && *lines > 0; i++, (*lines)--)
@@ -218,7 +218,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 	}
 	// If not last thread, send # of lines to next rank
 	if(rank != numThreads - 1)
-		MPI_Send(lines, 1, MPI_SHORT, rank + 1, 187, MPI_COMM_WORLD);
+		MPI_Send(lines, 1, MPI_INT, rank + 1, 187, MPI_COMM_WORLD);
 	
 	fflush(stdout);
 }
