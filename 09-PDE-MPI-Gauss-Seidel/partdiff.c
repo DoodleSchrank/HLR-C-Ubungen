@@ -187,17 +187,18 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 	// Rank 0 sets line #
 	if(rank == 0)
 	{
-		*lines = 8;
+		*lines = arguments->N + 1;
 		printf("Matrix:\n");
 
 		for(int j = 0; j < 9; j++)
 			printf("%7.4f", Matrix[0][j]);
 		printf("\n");
+		(*lines)--;
 	}
 
 	// Everybody except rank 0 wait for receiving remaining lines from process rank - 1
 	if(rank > 0)
-		MPI_Recv(lines, 1, MPI_SHORT, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+		MPI_Recv(lines, 1, MPI_SHORT, rank - 1, 187, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 	
 	// Print lines 1 through matrix_size - 2, cuz -1 is the last line
 	for(int i = 1; (uint64_t) i < matrix_size - 1 && *lines > 0; i++, (*lines)--)
@@ -217,7 +218,7 @@ DisplayMatrix(struct calculation_arguments * arguments, struct calculation_resul
 	}
 	// If not last thread, send # of lines to next rank
 	if(rank != numThreads - 1)
-		MPI_Send(lines, 1, MPI_SHORT, rank + 1, 0, MPI_COMM_WORLD);
+		MPI_Send(lines, 1, MPI_SHORT, rank + 1, 187, MPI_COMM_WORLD);
 	
 	fflush(stdout);
 }
@@ -283,29 +284,38 @@ calculate(struct calculation_arguments
 	// Recieve first row if Gauß-Seidel, needs to be done before lööp
 	if (rank != 0 && options->method == METH_GAUSS_SEIDEL)
 		MPI_Recv(Matrix_In[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-	FILE *file0;
-	FILE *file1;
-	file0 = fopen("output/output0", "w");
-	file1 = fopen("output/output1", "w");
 	
+	int flag1, flag2;
+
 	while (term_iteration > 0) {
 		Matrix_Out = arguments->Matrix[m1];
 		Matrix_In = arguments->Matrix[m2];
 
 		maxresiduum = 0;
 
-		//omp_set_dynamic(0);
-		//#pragma omp parallel for private(j, star, residuum) reduction(max: maxresiduum) num_threads(options->number)
+		omp_set_dynamic(0);
+		#pragma omp parallel for private(j, star, residuum) reduction(max: maxresiduum) num_threads(options->number)
+		
 		for (i = 1; i < matrix_size - 1; i++) {
 			double fpisin_i = 0.0;
 			if (options->inf_func == FUNC_FPISIN)
 				fpisin_i = fpisin * sin(pih * (double) (i + matrix_from));
 
 			// Wait for first row to be recieved
-			if (rank > 0 && i == 1 && results->stat_iteration > 0) {
-				MPI_Wait(&reqSendFirst, MPI_STATUS_IGNORE);
-				MPI_Wait(&reqRecvFirst, MPI_STATUS_IGNORE);
+			if (rank > 0 && i == 1 && results->stat_iteration > 0 && maxres >= options->term_precision) {
+				while(1)
+				{
+					MPI_Test(&reqSendFirst, &flag1, MPI_STATUS_IGNORE);
+					MPI_Test(&reqRecvFirst, &flag2, MPI_STATUS_IGNORE);
+					if(flag1 && flag2)
+						break;
+					else
+					{
+						MPI_Test(&reqRes, &flag1, MPI_STATUS_IGNORE);
+						if(flag1 && maxres >= options->term_precision)
+							break;
+					}
+				}
 			}
 			// First row to be sent
 			if (rank > 0 && i == 2) {
@@ -315,9 +325,20 @@ calculate(struct calculation_arguments
 
 			// Wait for last row to be sent
 			// i = matrix_size - 2 because thats the last row to be calculated
-			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2) {
-				MPI_Wait(&reqSendLast, MPI_STATUS_IGNORE);
-				MPI_Wait(&reqRecvLast, MPI_STATUS_IGNORE);
+			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2 && maxres >= options->term_precision) {
+				while(1)
+				{
+					MPI_Test(&reqSendLast, &flag1, MPI_STATUS_IGNORE);
+					MPI_Test(&reqRecvLast, &flag2, MPI_STATUS_IGNORE);
+					if(flag1 && flag2)
+						break;
+					else
+					{
+						MPI_Test(&reqRes, &flag1, MPI_STATUS_IGNORE);
+						if(flag1 && maxres >= options->term_precision)
+							break;
+					}
+				}
 			}
 
 			for (j = 1; j < N; j++) {
@@ -342,26 +363,6 @@ calculate(struct calculation_arguments
 			MPI_Irecv(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
 		}
 		
-		if(rank == 0)
-		{
-			fprintf(file0, "\nIteration: %ld\n", results->stat_iteration);
-			for (i = 0; i < matrix_size; i++) {
-				for (j = 0; j <= N; j++) {
-					fprintf(file0, "%7.4f", Matrix_In[i][j]);
-				}
-				fprintf(file0, "\n");
-			}
-		}
-		if(rank == 1)
-		{
-			fprintf(file1, "\nIteration: %ld\n", results->stat_iteration);
-			for (i = 0; i < matrix_size; i++) {
-				for (j = 0; j <= N; j++) {
-					fprintf(file1, "%7.4f", Matrix_In[i][j]);
-				}
-				fprintf(file1, "\n");
-			}
-		}
 		/* exchange m1 and m2 */
 		i = m1;
 		m1 = m2;
@@ -379,6 +380,8 @@ calculate(struct calculation_arguments
 					for (i = 1; i < (uint64_t)numThreads; i++)
 						MPI_Isend(&maxres, 1, MPI_DOUBLE, i, 1, MPI_COMM_WORLD, &reqRes);
 				}
+				else
+					maxres = DBL_MAX;
 			} else
 				MPI_Isend(&maxresiduum, 1, MPI_DOUBLE, 0, 1, MPI_COMM_WORLD, &reqRes);
 			if (maxres < options->term_precision)
@@ -390,9 +393,8 @@ calculate(struct calculation_arguments
 		results->stat_precision = maxresiduum;
 	}
 	results->m = m2;
-	fclose(file0);
-	fclose(file1);
 
+	// Cleanup of unwaited requests, bad service here
 	if(rank != 0)
 	{
 		MPI_Request_free(&reqSendFirst);
@@ -403,7 +405,7 @@ calculate(struct calculation_arguments
 		MPI_Request_free(&reqSendLast);
 		MPI_Request_free(&reqRecvLast);
 	}
-	if (options->termination == TERM_PREC)
+	if (options->termination == TERM_PREC && numThreads > 1)
 		MPI_Request_free(&reqRes);
 }
 
