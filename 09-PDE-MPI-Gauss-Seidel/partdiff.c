@@ -309,10 +309,10 @@ calculate(struct calculation_arguments
 					MPI_Test(&reqRecvFirst, &flag2, MPI_STATUS_IGNORE);
 					if(flag1 && flag2)
 						break;
-					else if(options->termination == TERM_PREC)
+					else if(options->termination <= TERM_PREC)
 					{
 						MPI_Test(&reqRes, &flag1, MPI_STATUS_IGNORE);
-						if(flag1 && maxres >= options->term_precision)
+						if(flag1 && maxres <= options->term_precision)
 							break;
 					}
 				}
@@ -332,10 +332,10 @@ calculate(struct calculation_arguments
 					MPI_Test(&reqRecvLast, &flag2, MPI_STATUS_IGNORE);
 					if(flag1 && flag2)
 						break;
-					else if(options->termination == TERM_PREC)
+					else if(options->termination <= TERM_PREC)
 					{
 						MPI_Test(&reqRes, &flag1, MPI_STATUS_IGNORE);
-						if(flag1 && maxres >= options->term_precision)
+						if(flag1 && maxres <= options->term_precision)
 							break;
 					}
 				}
