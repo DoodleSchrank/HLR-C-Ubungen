@@ -58,7 +58,7 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 
 	// safety if interlines > numThreads / 4
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
-	numThreads = (uint64_t)numThreads > ((N + 1( / 4) ? floor((N + 1)N / 4) : numThreads;
+	numThreads = (uint64_t)numThreads > ((N + 1) / 4) ? floor((N + 1) / 4) : numThreads;
 	matrix_size = floor(N / numThreads);
 	matrix_size += 2;
 
