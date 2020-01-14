@@ -59,7 +59,7 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	// safety if interlines > numThreads / 4 
 	// division by 5 because gauß-seidel implementation demands it!
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
-	numThreads = (uint64_t)numThreads > ((N + 1( / 5) ? floor((N + 1)N / 5) : numThreads;
+	numThreads = (uint64_t)numThreads > ((N + 1( / 4) ? floor((N + 1)N / 4) : numThreads;
 	matrix_size = floor(N / numThreads);
 	matrix_size += 2;
 
@@ -320,7 +320,7 @@ calculate(struct calculation_arguments
 
 			// Wait for last row to be sent
 			// i = matrix_size - 2 because thats the last row to be calculated
-			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 3 && maxres >= options->term_precision) {
+			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2 && maxres >= options->term_precision) {
 				while(1)
 				{
 					MPI_Test(&reqSendLast, &flag1, MPI_STATUS_IGNORE);
