@@ -56,8 +56,7 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 
 	uint64_t N = arguments->N;
 
-	// safety if interlines > numThreads / 4 
-	// division by 5 because gauß-seidel implementation demands it!
+	// safety if interlines > numThreads / 4
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
 	numThreads = (uint64_t)numThreads > ((N + 1( / 4) ? floor((N + 1)N / 4) : numThreads;
 	matrix_size = floor(N / numThreads);
@@ -335,6 +334,12 @@ calculate(struct calculation_arguments
 					}
 				}
 			}
+			
+			// First row to be sent
+			if (rank > 0 && i == 2) {
+				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
+				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
+			}
 
 			for (j = 1; j < N; j++) {
 				star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
@@ -349,12 +354,6 @@ calculate(struct calculation_arguments
 				}
 
 				Matrix_Out[i][j] = star;
-			}
-			
-			// First row to be sent
-			if (rank > 0 && i == 2) {
-				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
-				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
 			}
 
 		}
