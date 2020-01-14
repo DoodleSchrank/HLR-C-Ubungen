@@ -57,9 +57,9 @@ initVariables(struct calculation_arguments * arguments, struct calculation_resul
 	uint64_t N = arguments->N;
 
 	// safety if interlines > numThreads / 4 
-	// division by 4 to guarantee at least some benefit from paralellization
+	// division by 5 because gauß-seidel implementation demands it!
 	// N-1 because we dont want first and last line to be considered (with N+1 lines total)
-	numThreads = (uint64_t)numThreads > (N / 4) ? floor(N / 4) : numThreads;
+	numThreads = (uint64_t)numThreads > ((N + 1( / 5) ? floor((N + 1)N / 5) : numThreads;
 	matrix_size = floor(N / numThreads);
 	matrix_size += 2;
 
@@ -317,15 +317,10 @@ calculate(struct calculation_arguments
 					}
 				}
 			}
-			// First row to be sent
-			if (rank > 0 && i == 2) {
-				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
-				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
-			}
 
 			// Wait for last row to be sent
 			// i = matrix_size - 2 because thats the last row to be calculated
-			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2 && maxres >= options->term_precision) {
+			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 3 && maxres >= options->term_precision) {
 				while(1)
 				{
 					MPI_Test(&reqSendLast, &flag1, MPI_STATUS_IGNORE);
@@ -355,6 +350,13 @@ calculate(struct calculation_arguments
 
 				Matrix_Out[i][j] = star;
 			}
+			
+			// First row to be sent
+			if (rank > 0 && i == 2) {
+				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
+				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
+			}
+
 		}
 		// Send last row and recieve lower border
 		// ignore last rank because it has no followers /BIG SAD/
