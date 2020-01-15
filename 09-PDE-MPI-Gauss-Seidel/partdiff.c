@@ -304,8 +304,7 @@ calculate(struct calculation_arguments
 			if (rank > 0
 			  && i == 1
 			  && results->stat_iteration > 0
-			  && (options->termination == TERM_PREC
-			    && maxres >= options->term_precision
+			  && ((options->termination == TERM_PREC && maxres >= options->term_precision)
 			    || options->termination == TERM_ITER))
 			{
 				while(1)
@@ -328,8 +327,7 @@ calculate(struct calculation_arguments
 			if (results->stat_iteration > 0
 			  && rank < numThreads - 1
 			  && i == matrix_size - 2
-			  && (options->termination == TERM_PREC
-			    && maxres >= options->term_precision
+			  && ((options->termination == TERM_PREC && maxres >= options->term_precision)
 			    || options->termination == TERM_ITER))
 			{
 				while(1)
@@ -352,7 +350,7 @@ calculate(struct calculation_arguments
 				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
 				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
 			}
-			if(options->termination == TERM_PREC && maxres >= options->term_precision || options->termination == TERM_ITER)
+			if((options->termination == TERM_PREC && maxres >= options->term_precision) || options->termination == TERM_ITER)
 			{
 				for (j = 1; j < N; j++) {
 					star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
