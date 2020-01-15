@@ -2,7 +2,7 @@
 CC = mpicc
 
 # Compiler flags, paths and libraries
-CFLAGS = -std=c11 -pedantic -Wall -Wextra -Og -ggdb -g -fopenmp
+CFLAGS = -std=c11 -pedantic -Wall -Wextra -O3 -fopenmp #-Og -ggdb -g
 LFLAGS = $(CFLAGS)
 LIBS   = -lm
 
