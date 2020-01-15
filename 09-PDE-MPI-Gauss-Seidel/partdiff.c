@@ -159,8 +159,8 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 	if (options->inf_func == FUNC_F0) {
 		for (g = 0; g < arguments->num_matrices; g++) {
 			for (i = 0; i < matrix_size; i++) {
-				Matrix[g][i][0] = 1.0 - (h * i);
-				Matrix[g][i][N] = h * i;
+				Matrix[g][i][0] = 1.0 - (h * (i + matrix_from));
+				Matrix[g][i][N] = h * (i + matrix_from);
 			}
 
 			if (rank == 0) {
@@ -169,7 +169,7 @@ initMatrices(struct calculation_arguments * arguments, struct options const *opt
 			}
 
 			if (rank == numThreads - 1) {
-				for (j = 0; j < matrix_size; j++)
+				for (j = 0; j <= N ; j++)
 					Matrix[g][matrix_size - 1][j] = h * j;
 			}
 		}
@@ -301,14 +301,20 @@ calculate(struct calculation_arguments
 				fpisin_i = fpisin * sin(pih * (double) (i + matrix_from));
 
 			// Wait for first row to be recieved
-			if (rank > 0 && i == 1 && results->stat_iteration > 0 && maxres >= options->term_precision) {
+			if (rank > 0
+			  && i == 1
+			  && results->stat_iteration > 0
+			  && (options->termination == TERM_PREC
+			    && maxres >= options->term_precision
+			    || options->termination == TERM_ITER))
+			{
 				while(1)
 				{
 					MPI_Test(&reqSendFirst, &flag1, MPI_STATUS_IGNORE);
 					MPI_Test(&reqRecvFirst, &flag2, MPI_STATUS_IGNORE);
 					if(flag1 && flag2)
 						break;
-					else if(options->termination <= TERM_PREC)
+					if(options->termination == TERM_PREC)
 					{
 						MPI_Test(&reqRes, &flag1, MPI_STATUS_IGNORE);
 						if(flag1 && maxres <= options->term_precision)
@@ -319,14 +325,20 @@ calculate(struct calculation_arguments
 
 			// Wait for last row to be sent
 			// i = matrix_size - 2 because thats the last row to be calculated
-			if (results->stat_iteration > 0 && rank < numThreads - 1 && i == matrix_size - 2 && maxres >= options->term_precision) {
+			if (results->stat_iteration > 0
+			  && rank < numThreads - 1
+			  && i == matrix_size - 2
+			  && (options->termination == TERM_PREC
+			    && maxres >= options->term_precision
+			    || options->termination == TERM_ITER))
+			{
 				while(1)
 				{
 					MPI_Test(&reqSendLast, &flag1, MPI_STATUS_IGNORE);
 					MPI_Test(&reqRecvLast, &flag2, MPI_STATUS_IGNORE);
 					if(flag1 && flag2)
 						break;
-					else if(options->termination <= TERM_PREC)
+					if(options->termination == TERM_PREC)
 					{
 						MPI_Test(&reqRes, &flag1, MPI_STATUS_IGNORE);
 						if(flag1 && maxres <= options->term_precision)
@@ -340,20 +352,22 @@ calculate(struct calculation_arguments
 				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
 				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
 			}
+			if(options->termination == TERM_PREC && maxres >= options->term_precision || options->termination == TERM_ITER)
+			{
+				for (j = 1; j < N; j++) {
+					star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
+	
+					if (options->inf_func == FUNC_FPISIN)
+						star += fpisin_i * sin(pih * (double) j);
+	
+					if (options->termination == TERM_PREC || term_iteration == 1) {
+						residuum = Matrix_In[i][j] - star;
+						residuum = (residuum < 0) ? -residuum : residuum;
+						maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+					}
 
-			for (j = 1; j < N; j++) {
-				star = 0.25 * (Matrix_In[i - 1][j] + Matrix_In[i][j - 1] + Matrix_In[i][j + 1] + Matrix_In[i + 1][j]);
-
-				if (options->inf_func == FUNC_FPISIN)
-					star += fpisin_i * sin(pih * (double) j);
-
-				if (options->termination == TERM_PREC || term_iteration == 1) {
-					residuum = Matrix_In[i][j] - star;
-					residuum = (residuum < 0) ? -residuum : residuum;
-					maxresiduum = (residuum < maxresiduum) ? maxresiduum : residuum;
+					Matrix_Out[i][j] = star;
 				}
-
-				Matrix_Out[i][j] = star;
 			}
 
 		}
@@ -481,7 +495,7 @@ main(int argc, char **argv) {
 	if (rank < numThreads) {
 		allocateMatrices(&arguments);
 		initMatrices(&arguments, &options);
-		printf("Threads: %d, rank: %d, matrix size: %ld\n", numThreads, rank, matrix_size);
+		//DisplayMatrix(&arguments, &results);
 
 		gettimeofday(&start_time, NULL);
 		calculate(&arguments, &results, &options);
@@ -495,10 +509,6 @@ main(int argc, char **argv) {
 		DisplayMatrix(&arguments, &results);
 		freeMatrices(&arguments);
 	}
-	// This Barrier doesn't to anything, Threads just run straight through it and then we have the salad!
-	MPI_Barrier(MPI_COMM_WORLD);
-	printf("rank: %d sagt tschüss\n", rank);
-
 	MPI_Finalize();
 	return 0;
 }
