@@ -24,8 +24,8 @@
 #include <inttypes.h>
 #include <math.h>
 #include <sys/time.h>
-//#include <mpi.h>
-#include </usr/local/Cellar/mpich/3.3.1/include/mpi.h>
+#include <mpi.h>
+//#include </usr/local/Cellar/mpich/3.3.1/include/mpi.h>
 
 #include "partdiff.h"
 
