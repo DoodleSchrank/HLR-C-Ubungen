@@ -348,7 +348,7 @@ calculate(struct calculation_arguments
 			// First row to be sent
 			if (rank > 0 && i == 2) {
 				MPI_Isend(Matrix_Out[1], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqSendFirst);
-				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 0, MPI_COMM_WORLD, &reqRecvFirst);
+				MPI_Irecv(Matrix_Out[0], N + 1, MPI_DOUBLE, source, 2, MPI_COMM_WORLD, &reqRecvFirst);
 			}
 			if((options->termination == TERM_PREC && maxres >= options->term_precision) || options->termination == TERM_ITER)
 			{
@@ -372,7 +372,7 @@ calculate(struct calculation_arguments
 		// Send last row and recieve lower border
 		// ignore last rank because it has no followers /BIG SAD/
 		if (rank < numThreads - 1) {
-			MPI_Isend(Matrix_Out[matrix_size - 2], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqSendLast);
+			MPI_Isend(Matrix_Out[matrix_size - 2], N + 1, MPI_DOUBLE, target, 2, MPI_COMM_WORLD, &reqSendLast);
 			MPI_Irecv(Matrix_Out[matrix_size - 1], N + 1, MPI_DOUBLE, target, 0, MPI_COMM_WORLD, &reqRecvLast);
 		}
 		
